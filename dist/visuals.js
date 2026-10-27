@@ -39,6 +39,14 @@ function drawMonster(e) {
   if(!drawSprite(e.type,0,0,size,size)){c.fillStyle=e.color;c.beginPath();c.arc(0,0,e.r,0,7);c.fill()}
   c.restore();
 }
+function drawEnemyHealth(e) {
+  const boss=e.type==='mini'||e.type==='boss';
+  const width=boss?88:Math.max(30,e.r*2.4), height=boss?6:4;
+  const x=e.x-width/2,y=e.y-e.r*(boss?2:1.5)-11;
+  const ratio=Math.max(0,Math.min(1,e.hp/e.maxhp));
+  c.fillStyle='rgba(29,24,25,.85)';c.fillRect(x-1,y-1,width+2,height+2);
+  c.fillStyle=boss?'#f06f6a':'#d7615a';c.fillRect(x,y,width*ratio,height);
+}
 function limb(x1,y1,x2,y2,color,width=6){c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke()}
 function drawHero() {
   const weapon=p.weapon, facing=p.facing||1, moving=p.moving||0;
