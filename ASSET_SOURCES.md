@@ -25,3 +25,9 @@ image generation tool using the existing Ren artwork as reference. The prompt
 requested four consistent, transparent 2D poses: idle, sword windup, a short
 forward cut, and recovery, without skill effects. It is an interpretation of the
 reference artwork, not an extracted or official animation.
+
+`ren-body-2d.png`, `henesys-tree-top.png`, and `perion-rock-top.png` were
+generated with the built-in image generation tool. The prompts requested a
+stationary Ren body based on the existing sprite, an overhead forest patch
+matching the Henesys ground, and an overhead sandstone formation matching the
+Perion ground. The movable sword arm is drawn separately by the game.

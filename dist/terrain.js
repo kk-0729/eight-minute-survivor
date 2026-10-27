@@ -1,12 +1,12 @@
 const groundImages={henesys:new Image(),perion:new Image()};
 groundImages.henesys.src='assets/henesys-ground.png';groundImages.perion.src='assets/perion-ground.png';
-const terrainImages={tree:new Image(),rock:new Image()};terrainImages.tree.src='assets/henesys-tree.png';terrainImages.rock.src='assets/perion-rock.png';
+const terrainImages={tree:new Image(),rock:new Image()};terrainImages.tree.src='assets/henesys-tree-top.png';terrainImages.rock.src='assets/perion-rock-top.png';
 const terrainSpacing=340;
 function terrainAtCell(ix,iy,region=regionAt(clock)){
   if(tileHash(ix,iy,3)<.32)return null;
   let x=(ix+.23+tileHash(ix,iy,4)*.54)*terrainSpacing,y=(iy+.23+tileHash(ix,iy,5)*.54)*terrainSpacing;
   if(Math.hypot(x,y)<230)return null;
-  return {x,y,r:region==='perion'?32:26,type:region==='perion'?'rock':'tree'};
+  return {x,y,r:region==='perion'?32:26,type:region==='perion'?'rock':'tree',angle:Math.floor(tileHash(ix,iy,8)*4)*Math.PI/2};
 }
 function nearbyTerrain(x,y,region=regionAt(clock)){
   let ix=Math.floor(x/terrainSpacing),iy=Math.floor(y/terrainSpacing),out=[];
@@ -32,17 +32,18 @@ function steerEnemy(e,angle){
 function drawGround(){
   const image=groundImages[regionAt(clock)],left=p.x-W/2,top=p.y-H/2,size=700;
   if(!image.complete||!image.naturalWidth){drawField();return}
+  c.save();c.filter='brightness(0.76) saturate(0.72)';
   for(let x=Math.floor(left/size);x<=Math.floor((left+W)/size);x++)for(let y=Math.floor(top/size);y<=Math.floor((top+H)/size);y++)c.drawImage(image,x*size,y*size,size+1,size+1);
-  c.fillStyle='rgba(35,29,19,.22)';c.fillRect(left,top,W,H);
+  c.restore();c.fillStyle='rgba(32,29,37,.14)';c.fillRect(left,top,W,H);
 }
 function drawTerrain(){
   const left=p.x-W/2,top=p.y-H/2,region=regionAt(clock);
   let x0=Math.floor(left/terrainSpacing)-1,x1=Math.ceil((left+W)/terrainSpacing)+1,y0=Math.floor(top/terrainSpacing)-1,y1=Math.ceil((top+H)/terrainSpacing)+1;
   for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){
     let o=terrainAtCell(x,y,region);if(!o)continue;
-    c.fillStyle='rgba(32,24,20,.28)';c.beginPath();c.ellipse(o.x,o.y+9,o.r*1.25,o.r*.6,0,0,7);c.fill();
+    c.fillStyle='rgba(25,23,20,.32)';c.beginPath();c.ellipse(o.x,o.y+3,o.r*1.34,o.r*1.12,0,0,7);c.fill();
     const img=terrainImages[o.type];
-    if(img.complete&&img.naturalWidth){let h=o.type==='tree'?135:112,w=h*img.naturalWidth/img.naturalHeight;c.drawImage(img,o.x-w/2,o.y-h*.76,w,h)}
+    if(img.complete&&img.naturalWidth){let h=o.type==='tree'?110:116,w=h*img.naturalWidth/img.naturalHeight;c.save();c.translate(o.x,o.y);c.rotate(o.angle);c.filter='brightness(0.68) saturate(0.72)';c.drawImage(img,-w/2,-h/2,w,h);c.restore()}
     else{c.fillStyle=o.type==='tree'?'#285f32':'#9a6849';c.beginPath();c.arc(o.x,o.y,o.r,0,7);c.fill()}
   }
 }
