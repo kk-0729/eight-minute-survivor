@@ -20,6 +20,8 @@ Perion-style sandstone outcrop. They are stored in `dist/assets/` as
 `henesys-ground.png`, `perion-ground.png`, `henesys-tree.png`, and
 `perion-rock.png`.
 
-The in-game 3D characters are original procedural interpretations, not extracted
-MapleStory character models. Three.js 0.160.1 is included under the MIT license;
-see `THREE-LICENSE.txt`.
+The `dist/assets/ren-sword-2d.png` sprite sheet was generated with the built-in
+image generation tool using the existing Ren artwork as reference. The prompt
+requested four consistent, transparent 2D poses: idle, sword windup, a short
+forward cut, and recovery, without skill effects. It is an interpretation of the
+reference artwork, not an extracted or official animation.
