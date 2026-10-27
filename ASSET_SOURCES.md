@@ -10,3 +10,16 @@ permission for redistribution or commercial use.
 - Field monsters: images are named after the corresponding English wiki article in `dist/assets/`.
 
 Boss attack patterns are simplified adaptations for this top-down prototype.
+
+## Generated environment assets
+
+Generated with the built-in image generation tool from the user's screenshots.
+The prompts requested top-down, seamless Henesys-style grass and Perion-style
+sandstone ground, plus isolated transparent sprites of a broadleaf tree and a
+Perion-style sandstone outcrop. They are stored in `dist/assets/` as
+`henesys-ground.png`, `perion-ground.png`, `henesys-tree.png`, and
+`perion-rock.png`.
+
+The in-game 3D characters are original procedural interpretations, not extracted
+MapleStory character models. Three.js 0.160.1 is included under the MIT license;
+see `THREE-LICENSE.txt`.
