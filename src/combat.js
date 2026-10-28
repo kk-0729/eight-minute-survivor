@@ -62,6 +62,7 @@ function applyBurn(enemy,directDamage){
 function applyIce(enemy){enemy.iceRemaining=2}
 function tickStatuses(enemy,dt,onBurn){
   enemy.iceRemaining=Math.max(0,(enemy.iceRemaining||0)-dt);
+  enemy.freezeRemaining=Math.max(0,(enemy.freezeRemaining||0)-dt);
   if(enemy.iceRemaining<1e-9)enemy.iceRemaining=0;
   const burn=enemy.burn;if(!burn)return;
   let time=Math.min(dt,burn.remaining);
