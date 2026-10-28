@@ -2,9 +2,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const source = path.join(root, 'dist');
+const source = path.join(root, 'src');
 const destination = path.join(root, 'build-pages');
-if (!fs.existsSync(path.join(source, 'index.html'))) throw new Error('dist/index.html is missing');
+const distribution = path.join(root, 'dist');
+if (!fs.existsSync(path.join(source, 'index.html'))) throw new Error('src/index.html is missing');
 if (fs.existsSync(destination)) {
   const stats = fs.lstatSync(destination);
   if (!stats.isDirectory() || stats.isSymbolicLink()) throw new Error('build-pages must be a real directory');
@@ -22,4 +23,6 @@ function copyDirectory(from, to) {
 }
 copyDirectory(source, destination);
 fs.writeFileSync(path.join(destination, '.nojekyll'), '');
+// Preserve unrelated files in dist; only overwrite files represented in src.
+copyDirectory(source, distribution);
 console.log('Static Pages build ready in build-pages/');

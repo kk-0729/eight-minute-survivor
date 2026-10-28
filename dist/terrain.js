@@ -1,6 +1,6 @@
 const groundImages={henesys:new Image(),perion:new Image()};
-groundImages.henesys.src='assets/henesys-ground.png';groundImages.perion.src='assets/perion-ground.png';
-const terrainImages={tree:new Image(),rock:new Image()};terrainImages.tree.src='assets/henesys-tree-top.png';terrainImages.rock.src='assets/perion-rock-top.png';
+groundImages.henesys.src='assets/terrain/henesys-ground.png';groundImages.perion.src='assets/terrain/perion-ground.png';
+const terrainImages={tree:new Image(),rock:new Image()};terrainImages.tree.src='assets/terrain/henesys-tree-top.png';terrainImages.rock.src='assets/terrain/perion-rock-top.png';
 const terrainSpacing=340;
 function terrainAtCell(ix,iy,region=regionAt(clock)){
   if(tileHash(ix,iy,3)<.32)return null;

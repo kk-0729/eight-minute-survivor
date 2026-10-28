@@ -47,6 +47,17 @@ function drawEnemyHealth(e) {
   c.fillStyle='rgba(29,24,25,.85)';c.fillRect(x-1,y-1,width+2,height+2);
   c.fillStyle=boss?'#f06f6a':'#d7615a';c.fillRect(x,y,width*ratio,height);
 }
+function drawStatusEffects(e){
+  if(e.iceRemaining>0){
+    const opacity=Math.min(1,e.iceRemaining/.35);
+    c.save();c.globalAlpha=opacity;c.fillStyle='rgba(82,187,255,.25)';c.beginPath();c.arc(e.x,e.y,e.r+2,0,7);c.fill();
+    c.fillStyle='#bceeff';for(let i=0;i<3;i++){const a=i*2.1+clock*.6;c.fillRect(e.x+Math.cos(a)*e.r-2,e.y+Math.sin(a)*e.r-2,4,4)}c.restore();
+  }
+  if(e.fire>0){
+    c.save();c.fillStyle='#ff983e';for(let i=0;i<3;i++){let x=e.x-e.r*.65+i*e.r*.6,y=e.y+e.r*.4-Math.abs(Math.sin(clock*9+i))*e.r;c.fillRect(x,y,4,6)}
+    c.fillStyle='#ffda76';c.fillRect(e.x-2,e.y-e.r-4-(clock*12%8),3,3);c.restore();
+  }
+}
 function limb(x1,y1,x2,y2,color,width=6){c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.beginPath();c.moveTo(x1,y1);c.lineTo(x2,y2);c.stroke()}
 function drawHero() {
   const weapon=p.weapon, facing=p.facing||1, moving=p.moving||0;
@@ -86,8 +97,9 @@ function drawHero() {
 }
 function drawProjectile(s){
  c.save();c.translate(s.x,s.y);c.rotate(Math.atan2(s.vy,s.vx));
- if(s.kind==='crossbow'){c.strokeStyle='#fbebba';c.lineWidth=2.5;c.beginPath();c.moveTo(-11,0);c.lineTo(9,0);c.stroke();c.fillStyle='#d2e5df';c.beginPath();c.moveTo(12,0);c.lineTo(5,-3);c.lineTo(5,3);c.fill();c.strokeStyle='#f5d08c';c.beginPath();c.moveTo(-11,-4);c.lineTo(-7,0);c.lineTo(-11,4);c.stroke()}
- else if(s.kind==='staff'){c.fillStyle='#e66d25';c.beginPath();c.ellipse(-4,0,11,6,0,0,7);c.fill();c.fillStyle='#ffd86a';c.beginPath();c.arc(2,0,5,0,7);c.fill()}
+ const color={physical:'#f4dfad',fire:'#ff8649',ice:'#9adfff',lightning:'#ffec74'}[s.element]||'#ed87a3';
+ if(s.kind==='crossbow'){c.fillStyle=color;c.fillRect(-11,-1,21,3);c.fillRect(6,-3,5,7);c.fillStyle='#e7e1c9';c.fillRect(-10,-4,3,8)}
+ else if(s.kind==='staff'){c.fillStyle=color;c.fillRect(-8,-5,15,10);c.fillStyle='#fff2ce';c.fillRect(-1,-3,7,6)}
  else {c.fillStyle='#ed87a3';c.beginPath();c.arc(0,0,s.r,0,7);c.fill()}
  c.restore();
 }

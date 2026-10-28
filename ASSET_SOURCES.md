@@ -1,38 +1,12 @@
-# Image sources
+# 게임 그래픽 출처
 
-The prototype uses MapleStory character, monster, and boss artwork obtained from
-[MapleStory Wiki](https://maplestorywiki.net/). The artwork belongs to its
-respective rights holders, including Nexon. Its inclusion here does not grant
-permission for redistribution or commercial use.
+현재 배포 산출물은 `src/`에서만 생성합니다. 메이플스토리 위키에서 가져왔던
+캐릭터·몬스터·보스 원본 이미지는 현재 배포본에서 사용하지 않습니다.
+기존 공개 Git 이력에는 교체 전 파일이 남아 있습니다. 이력 정리는 별도 조치가 필요합니다.
 
-- Characters: [Ren](https://maplestorywiki.net/w/Ren), [Bow Master](https://maplestorywiki.net/w/Bow_Master), [Evan](https://maplestorywiki.net/w/Evan).
-- Bosses: [Guard Captain Darknell](https://maplestorywiki.net/w/Darknell/Monster), [Limbo](https://maplestorywiki.net/w/Limbo/Monster).
-- Field monsters: images are named after the corresponding English wiki article in `dist/assets/`.
+- `src/assets/characters/adventurers.png`: 내장 이미지 생성 도구로 제작한 독자적인 흰 머리 매화 검사, 사수, 마법사 픽셀아트. 기존 렌의 분위기를 참고하되 특정 원작 캐릭터를 복제하지 않도록 요청했습니다.
+- `src/assets/monsters/creatures.png`: 내장 이미지 생성 도구로 제작한 독자적인 판타지 몬스터 8종 픽셀아트 아틀라스. 20개 적 유형이 공통 외형을 재사용합니다.
+- `src/assets/terrain/`: 사용자가 제공한 필드 스크린샷을 분위기 참고로 생성한 초원·황토 배경과 지형물. 원본 스크린샷 파일을 사용하지 않습니다.
+- 무기, 투사체, 상태이상, 사망 효과: Canvas 코드로 그린 임시 픽셀 스타일 그래픽.
 
-Boss attack patterns are simplified adaptations for this top-down prototype.
-
-## Generated environment assets
-
-Generated with the built-in image generation tool from the user's screenshots.
-The prompts requested top-down, seamless Henesys-style grass and Perion-style
-sandstone ground, plus isolated transparent sprites of a broadleaf tree and a
-Perion-style sandstone outcrop. They are stored in `dist/assets/` as
-`henesys-ground.png`, `perion-ground.png`, `henesys-tree.png`, and
-`perion-rock.png`.
-
-The `dist/assets/ren-sword-2d.png` sprite sheet was generated with the built-in
-image generation tool using the existing Ren artwork as reference. The prompt
-requested four consistent, transparent 2D poses: idle, sword windup, a short
-forward cut, and recovery, without skill effects. It is an interpretation of the
-reference artwork, not an extracted or official animation.
-
-`ren-body-2d.png`, `henesys-tree-top.png`, and `perion-rock-top.png` were
-generated with the built-in image generation tool. The prompts requested a
-stationary Ren body based on the existing sprite, an overhead forest patch
-matching the Henesys ground, and an overhead sandstone formation matching the
-Perion ground. The movable sword arm is drawn separately by the game.
-
-`dist/assets/plum-sword.png` was generated with the built-in image generation
-tool using the user's supplied spectral sword image as a shape reference. The
-prompt requested a horizontal sword with a plum-blossom motif and rose-pink,
-dark plum and pale highlights, isolated on a transparent background.
+캐릭터와 몬스터의 걷기 및 공격은 아틀라스의 독립 애니메이션 프레임이 아니라 그림 이동과 별도 팔·무기, Canvas 효과를 조합한 임시 애니메이션입니다.
