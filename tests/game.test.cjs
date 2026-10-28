@@ -409,3 +409,16 @@ test('Sephiria-inspired element cards trigger different nonhoming effects',()=>{
  assert.ok(r.ice.fx.includes('blast')&&r.ice.damage>0);
  assert.ok(r.lightning.fx.includes('blast')&&r.lightning.damage>0);
 });
+
+test('oak coal shortens burn interval without extending burn duration',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('staff','fire');p.items.oakCoal=true;
+   const enemy={};const ticks=[];applyBurn(enemy,30);
+   tickStatuses(enemy,3,(_e,v)=>ticks.push(v));
+   return {interval:.7,ticks,expired:!enemy.burn};
+ })()`);
+ assert.equal(r.ticks.length,4);
+ assert.ok(r.ticks.every(x=>x===3));
+ assert.equal(r.expired,true);
+});
