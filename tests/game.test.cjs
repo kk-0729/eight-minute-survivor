@@ -481,3 +481,82 @@ test('route-specific skill visuals accompany real periodic damage',()=>{
   assert.ok(result.seen,weapon+'/'+element+'/'+route);assert.ok(result.hp<10000);
  }
 });
+
+test('sword slash exactly covers the visible 120-degree cone and retains base range',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   const a=58*Math.PI/180,b=68*Math.PI/180,range=WEAPON_STATS.sword.range;
+   return {totalDegrees:2*SWORD_HALF_ANGLE*180/Math.PI,range,
+     inside:circleTouchesSword(80*Math.cos(a),80*Math.sin(a),0,0,0,0),
+     outside:circleTouchesSword(80*Math.cos(b),80*Math.sin(b),0,0,0,0),
+     rear:circleTouchesSword(-80,0,0,0,0,0)};
+ })()`);
+ assert.ok(Math.abs(r.totalDegrees-120)<1e-8);
+ assert.equal(r.range,92);assert.equal(r.inside,true);
+ assert.equal(r.outside,false);assert.equal(r.rear,false);
+});
+
+test('real sword attacks alternate left-to-right and right-to-left',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('sword','ice');spawn=1000;let e=addEnemy('stone_golem');
+   e.x=70;e.y=0;e.speed=0;e.hp=e.maxhp=900;e.defense=0;
+   const out=[];
+   for(let i=0;i<2;i++){
+      attack=0;p.action=null;update(.01);
+      const a=p.action;const direction=a.swingDirection;
+      out.push({dir:direction,start:swordArmAngle(a)});
+      update(.1);
+      out[i].progress=p.action?.swordSwing?.progress??-1;
+      out[i].fx=fx.some(f=>f.type==='swordArea'&&f.direction===direction);
+      out[i].end=swordSwingAngle(0,direction,1);
+   }
+   return out;
+ })()`);
+ assert.equal(r.length,2);
+ assert.equal(r[0].dir,-r[1].dir);
+ assert.ok(r[0].fx&&r[1].fx);
+ assert.ok(r[0].progress>=0&&r[1].progress>=0);
+ assert.ok(Math.abs(r[0].end+r[1].end)<1e-8);
+});
+
+test('sword damage occurs as swing crosses target, never before or twice per attack',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('sword','ice');spawn=1000;
+   const e=addEnemy('stone_golem');e.x=80;e.y=0;e.speed=0;e.hp=e.maxhp=1000;e.defense=0;
+   attack=0;update(.01); // launch windup
+   update(.09); // windup finishes, sword visual begins
+   const before=1000-e.hp;
+   update(.1); // crosses centre
+   const during=1000-e.hp, hits=p.action.swordSwing.hitTargets.size,
+     visual=p.action.swordSwing.visual.progress;
+   const impacts=fx.filter(f=>f.type==='swordImpact').length;
+   update(.1);
+   const after=1000-e.hp;
+   return {before,during,after,hits,visual,impacts};
+ })()`);
+ assert.equal(r.before,0);
+ assert.ok(r.during>0);
+ assert.equal(r.after,r.during);
+ assert.equal(r.hits,1);
+ assert.ok(Math.abs(r.visual-.5)<1e-6);
+ assert.equal(r.impacts,1);
+});
+
+test('sword swing only hits targets as they enter its arc',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('sword','physical');spawn=1000;
+   const e=addEnemy('stone_golem');e.x=80*Math.cos(.9);e.y=80*Math.sin(.9);
+   e.speed=0;e.hp=e.maxhp=1000;e.defense=0;
+   p.action={stage:'windup',windup:.08,follow:.2,remaining:.08,aim:0,
+     target:{x:80,y:0},swingDirection:1};
+   fireWeapon();p.action.stage='follow';p.action.remaining=.2;
+   advanceSwordSwing(p.action,.1);const halfway=1000-e.hp;
+   advanceSwordSwing(p.action,.1);const completed=1000-e.hp;
+   return {halfway,completed};
+ })()`);
+ assert.equal(r.halfway,0);
+ assert.ok(r.completed>0);
+});

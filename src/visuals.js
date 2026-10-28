@@ -77,10 +77,10 @@ function drawHero() {
   if(weapon==='sword'){c.fillStyle='#e7dfd8';c.beginPath();c.ellipse(-6,-31,3,9,-.3,0,7);c.ellipse(1,-32,3,9,.1,0,7);c.fill()}
   c.fillStyle='#303039';c.fillRect(3,-18,2,2);c.fillStyle='#d88886';c.fillRect(7,-14,2,1);
   if(weapon==='sword'){
-    const angle=acting?(anim.stage==='windup'?-1.65-wind*.5:-2.15+follow*2.9):-.65;
+    const angle=swordArmAngle(anim);
     const hx=9+Math.cos(angle)*12,hy=-2+Math.sin(angle)*12;
     limb(-7,-4,-11,6,'#f6d6b3');limb(7,-5,hx,hy,'#f6d6b3');
-    c.save();c.translate(hx,hy);c.rotate(angle);c.strokeStyle='#e8f2f0';c.lineWidth=4;c.beginPath();c.moveTo(0,0);c.lineTo(24,0);c.stroke();c.strokeStyle='#77624b';c.lineWidth=4;c.beginPath();c.moveTo(-3,-5);c.lineTo(-3,5);c.stroke();c.restore();
+    c.save();c.translate(hx,hy);c.rotate(angle);c.strokeStyle=swordElementPalette(p.element).inner;c.lineWidth=4;c.beginPath();c.moveTo(0,0);c.lineTo(24,0);c.stroke();c.strokeStyle='#77624b';c.lineWidth=4;c.beginPath();c.moveTo(-3,-5);c.lineTo(-3,5);c.stroke();c.restore();
   }else if(weapon==='crossbow'){
     const pull=acting?(anim.stage==='windup'?wind:Math.max(0,1-follow*5)):0;
     limb(6,-5,15,-4,'#f6d6b3');limb(-6,-5,9-pull*11,-4,'#f6d6b3');
