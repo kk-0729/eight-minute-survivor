@@ -162,7 +162,8 @@ test('lightning hits one other target, has a per-weapon cooldown, and cannot rec
     weaponHit(enemiesHere[0],'crossbow','lightning');weaponHit(enemiesHere[0],'crossbow','lightning');
     let first=enemiesHere.map(e=>500-e.hp);clock=1;weaponHit(enemiesHere[0],'crossbow','lightning');
     return {first,after:enemiesHere.map(e=>500-e.hp),lines:fx.filter(f=>f.type==='line').length};})()`);
-  assert.deepEqual(Array.from(r.first),[40,8,0]);assert.deepEqual(Array.from(r.after),[60,16,0]);assert.equal(r.lines,2);
+  assert.ok(Math.abs(r.first[0]-26.4)<1e-8);assert.ok(Math.abs(r.first[1]-5.28)<1e-8);assert.equal(r.first[2],0);
+  assert.ok(Math.abs(r.after[0]-39.6)<1e-8);assert.ok(Math.abs(r.after[1]-10.56)<1e-8);assert.equal(r.lines,2);
 });
 
 test('weapon cadence, projectile data and representative time to kill', (t) => {
@@ -191,13 +192,13 @@ test('unupgraded weapons can defeat the final boss in a controlled TTK trial', (
     start(weapon);spawn=1000;p.hp=1e6;let boss=addEnemy('boss');boss.x=70;boss.y=0;boss.speed=0;boss.shoot=1000;boss.dmg=0;
     while(clock<200&&!boss.dead)update(.01);out[weapon]={dead:boss.dead,time:clock};}return out;})()`);
   for(const weapon of ['sword','crossbow','staff'])assert.equal(r[weapon].dead,true,weapon);
-  t.diagnostic(`4000 HP / 12 DEF, no upgrades: sword ${r.sword.time.toFixed(1)}s, crossbow ${r.crossbow.time.toFixed(1)}s, staff ${r.staff.time.toFixed(1)}s`);
+  t.diagnostic(`4000 HP / 50 DEF, no upgrades: sword ${r.sword.time.toFixed(1)}s, crossbow ${r.crossbow.time.toFixed(1)}s, staff ${r.staff.time.toFixed(1)}s`);
 });
 
 test('sword upgrades exclude multishot; ranged weapons retain it', () => {
   const { context } = gameContext();
   const result = run(context, `(() => {
-    const candidates=upgrades.filter(u=>['power','speed','multi','vital'].includes(u.id));
+    const candidates=upgrades.filter(u=>['elemental','speed','multi','vital'].includes(u.id));
     upgrades.splice(0,upgrades.length,...candidates);const oldRandom=Math.random;Math.random=()=>.5;
     start('sword');levelQueue=1;choose();let found=overlay.innerHTML.includes('다중 공격');
     start('crossbow');levelQueue=1;choose();let ranged=overlay.innerHTML.includes('다중 공격');Math.random=oldRandom;
@@ -308,6 +309,6 @@ test('midboss uses comparable defense and HP scaling',()=>{
    return {midHP:mini.hp,bossHP:boss.hp,midDef:mini.defense,bossDef:boss.defense};
  })()`);
  assert.equal(r.midHP,1260);assert.equal(r.bossHP,4000);
- assert.equal(r.midDef,BOSS_DEFENSE);
+ assert.equal(r.midDef,50);
  assert.equal(r.midDef,r.bossDef);
 });
