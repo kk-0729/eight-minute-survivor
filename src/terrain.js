@@ -32,9 +32,9 @@ function steerEnemy(e,angle){
 function drawGround(){
   const image=groundImages[regionAt(clock)],left=p.x-W/2,top=p.y-H/2,size=700;
   if(!image.complete||!image.naturalWidth){drawField();return}
-  c.save();c.filter='brightness(0.76) saturate(0.72)';
+  c.save();c.filter='brightness(0.43) saturate(0.63)';
   for(let x=Math.floor(left/size);x<=Math.floor((left+W)/size);x++)for(let y=Math.floor(top/size);y<=Math.floor((top+H)/size);y++)c.drawImage(image,x*size,y*size,size+1,size+1);
-  c.restore();c.fillStyle='rgba(32,29,37,.14)';c.fillRect(left,top,W,H);
+  c.restore();c.fillStyle='rgba(13,20,20,.20)';c.fillRect(left,top,W,H);
 }
 function drawTerrain(){
   const left=p.x-W/2,top=p.y-H/2,region=regionAt(clock);
