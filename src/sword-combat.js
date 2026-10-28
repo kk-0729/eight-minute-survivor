@@ -41,10 +41,10 @@ function swordSweepTouches(x,y,r,ox,oy,aim,direction,previous,current,range){
 }
 function swordElementPalette(element){
   return {
-    fire:{outer:'rgba(255,112,47,.85)',inner:'rgba(255,216,123,.9)',impact:'#ffa04e'},
-    ice:{outer:'rgba(102,199,255,.83)',inner:'rgba(224,251,255,.91)',impact:'#b5ebff'},
+    fire:{outer:'rgba(255,65,10,.9)',inner:'rgba(255,238,116,.98)',impact:'#ffa04e'},
+    ice:{outer:'rgba(17,148,255,.88)',inner:'rgba(224,251,255,.98)',impact:'#b5ebff'},
     lightning:{outer:'rgba(255,206,74,.87)',inner:'rgba(255,249,177,.92)',impact:'#ffe47a'},
-    physical:{outer:'rgba(247,178,218,.82)',inner:'rgba(255,242,252,.92)',impact:'#fce1ed'}
+    physical:{outer:'rgba(255,174,32,.88)',inner:'rgba(255,250,175,.98)',impact:'#ffe794'}
   }[element]||{outer:'#efc1db',inner:'#fff0fb',impact:'#f9e5f0'};
 }
 function drawSwordArea(f){
@@ -59,33 +59,42 @@ function drawSwordArea(f){
   const opacity=Math.max(.08,1-progress*.62);
   c.save();
   c.globalAlpha*=opacity;
-  // Only a whisper of the complete attack sector is shown; the strong trail
-  // follows the same interpolated angle used by hit detection.
-  c.beginPath();c.moveTo(f.x,f.y);
-  c.arc(f.x,f.y,radius,aim-SWORD_HALF_ANGLE,aim+SWORD_HALF_ANGLE);
-  c.closePath();c.fillStyle='rgba(245,235,238,.035)';c.fill();
-  function ribbon(outer,width,color){
-    const steps=18,span=tip-tail;
+  // Layered crescent trails share the attack's angle and radius with the hitbox.
+  // A fixed set of sparks avoids flicker and allocation on every frame.
+  function ribbon(outer,width,color,offset=0){
+    const steps=22, span=tip-tail;
     if(Math.abs(span)<.0001)return;
     c.beginPath();
     for(let i=0;i<=steps;i++){
-      const t=i/steps,a=tail+span*t;
-      if(i===0)c.moveTo(f.x+outer*Math.cos(a),f.y+outer*Math.sin(a));
-      else c.lineTo(f.x+outer*Math.cos(a),f.y+outer*Math.sin(a));
+      const t=i/steps,a=tail+span*t, r=outer-offset;
+      if(i===0)c.moveTo(f.x+r*Math.cos(a),f.y+r*Math.sin(a));
+      else c.lineTo(f.x+r*Math.cos(a),f.y+r*Math.sin(a));
     }
     for(let i=steps;i>=0;i--){
       const t=i/steps,a=tail+span*t;
-      const inner=outer-(3+width*Math.sin(Math.PI*t));
+      const inner=outer-offset-(2+width*Math.sin(Math.PI*t));
       c.lineTo(f.x+inner*Math.cos(a),f.y+inner*Math.sin(a));
     }
     c.closePath();c.fillStyle=color;c.fill();
   }
-  ribbon(radius,15,palette.outer);
-  ribbon(radius-11,5,palette.inner);
-  c.fillStyle=palette.inner;
-  for(let i=0;i<3;i++){
-    const a=tip-side*(.1+i*.17),d=radius-10-i*9;
-    c.fillRect(f.x+Math.cos(a)*d-2,f.y+Math.sin(a)*d-2,4,4);
+  c.shadowColor=palette.impact;c.shadowBlur=15;
+  ribbon(radius,24,palette.outer);
+  ribbon(radius-3,10,palette.inner);
+  c.shadowBlur=0;
+  if(f.element==='ice'){
+    ribbon(radius-20,10,palette.outer);
+    ribbon(radius-34,7,palette.inner);
+  }
+  c.fillStyle=palette.inner;c.strokeStyle=palette.inner;c.lineWidth=1.5;
+  for(let i=0;i<8;i++){
+    const a=tip-side*(.08+i*.09),d=radius-5-(i%3)*9;
+    const x=f.x+Math.cos(a)*d,y=f.y+Math.sin(a)*d;
+    if(f.element==='lightning'){
+      c.beginPath();c.moveTo(x,y);c.lineTo(x+Math.cos(a+.65)*8,y+Math.sin(a+.65)*8);
+      c.lineTo(x+Math.cos(a+.3)*12,y+Math.sin(a+.3)*12);c.stroke();
+    }else if(f.element==='ice'){
+      c.beginPath();c.moveTo(x,y-4);c.lineTo(x+3,y);c.lineTo(x,y+4);c.lineTo(x-3,y);c.closePath();c.fill();
+    }else c.fillRect(x-2,y-2,i%2?3:5,i%2?3:5);
   }
   c.restore();
 }

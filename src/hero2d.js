@@ -18,9 +18,9 @@ function drawRenReference(){
  const aiming=Boolean(action);
  const angle=renFacingAngle();
  const facingLeft=Math.cos(angle)<-.08;
- const frame=action?(action.stage==='windup'?1:2):0;
- const bob=aiming?0:(p.moving?Math.abs(Math.sin(clock*11))*1.2:0);
- const walk=aiming?0:p.moving?Math.sin(clock*12)*1.2:0;
+ const frame=action?(action.stage==='windup'?1:action.stage==='follow'?2:0):0;
+ const bob=p.moving?Math.abs(Math.sin(clock*11))*1.2:Math.sin(clock*2)*.35;
+ const walk=p.moving?Math.sin(clock*12)*1.2:0;
  const up=Math.sin(angle)<-.35;
  const shoulderTurn=aiming?Math.max(-.19,Math.min(.19,Math.sin(angle)*-.16)):0;
  // Frame selection uses original screenshots: idle, drawn sword, completed strike.
