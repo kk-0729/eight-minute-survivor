@@ -1,19 +1,19 @@
 // The attack sector is shared by collision and its visual effect.
 const SWORD_HALF_ANGLE=.72;
-function circleTouchesSword(x,y,r,originX,originY,angle){
+function circleTouchesSword(x,y,r,originX,originY,angle,range=WEAPON_STATS.sword.range){
   const dx=x-originX,dy=y-originY,d=Math.hypot(dx,dy);
   if(d<=r)return true;
   const delta=Math.atan2(Math.sin(Math.atan2(dy,dx)-angle),Math.cos(Math.atan2(dy,dx)-angle));
-  if(Math.abs(delta)<=SWORD_HALF_ANGLE)return d<=WEAPON_STATS.sword.range+r;
+  if(Math.abs(delta)<=SWORD_HALF_ANGLE)return d<=range+r;
   for(const side of [-1,1]){
     const a=angle+side*SWORD_HALF_ANGLE,ux=Math.cos(a),uy=Math.sin(a);
-    const projection=Math.max(0,Math.min(WEAPON_STATS.sword.range,dx*ux+dy*uy));
+    const projection=Math.max(0,Math.min(range,dx*ux+dy*uy));
     if(Math.hypot(dx-ux*projection,dy-uy*projection)<=r)return true;
   }
   return false;
 }
 function drawSwordArea(f){
-  const radius=WEAPON_STATS.sword.range;
+  const radius=f.range||WEAPON_STATS.sword.range;
   const progress=Math.max(0,Math.min(1,1-f.life/f.max));
   const sweep=Math.min(1,progress/.55);
   const start=f.a-SWORD_HALF_ANGLE;
@@ -38,7 +38,7 @@ function drawSwordArea(f){
     }
     c.closePath();c.fillStyle=color;c.fill();
   }
-  ribbon(radius,10,'rgba(250,197,218,.60)');
+  ribbon(radius,10,f.element==='fire'?'rgba(255,150,83,.7)':f.element==='ice'?'rgba(142,219,255,.7)':f.element==='lightning'?'rgba(255,224,101,.7)':'rgba(250,197,218,.6)');
   ribbon(radius-12,4,'rgba(255,235,243,.55)');
   c.lineWidth=1.2;c.strokeStyle='rgba(255,231,241,.8)';c.beginPath();
   c.arc(f.x,f.y,radius-.8,tail,end);c.stroke();
