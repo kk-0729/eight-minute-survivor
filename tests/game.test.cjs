@@ -506,7 +506,7 @@ test('real sword attacks alternate left-to-right and right-to-left',()=>{
       attack=0;p.action=null;update(.01);
       const a=p.action;const direction=a.swingDirection;
       out.push({dir:direction,start:swordArmAngle(a)});
-      update(.1);
+      update(.17);
       out[i].progress=p.action?.swordSwing?.progress??-1;
       out[i].fx=fx.some(f=>f.type==='swordArea'&&f.direction===direction);
       out[i].end=swordSwingAngle(0,direction,1);
@@ -526,9 +526,9 @@ test('sword damage occurs as swing crosses target, never before or twice per att
    start('sword','ice');spawn=1000;
    const e=addEnemy('stone_golem');e.x=80;e.y=0;e.speed=0;e.hp=e.maxhp=1000;e.defense=0;
    attack=0;update(.01); // launch windup
-   update(.09); // windup finishes, sword visual begins
+   update(.16); // windup finishes, sword visual begins
    const before=1000-e.hp;
-   update(.1); // crosses centre
+   update(.07); // crosses centre
    const during=1000-e.hp, hits=p.action.swordSwing.hitTargets.size,
      visual=p.action.swordSwing.visual.progress;
    const impacts=fx.filter(f=>f.type==='swordImpact').length;
