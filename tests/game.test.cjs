@@ -517,9 +517,9 @@ test('sword damage occurs as swing crosses target, never before or twice per att
    update(.1); // crosses centre
    const during=1000-e.hp, hits=p.action.swordSwing.hitTargets.size,
      visual=p.action.swordSwing.visual.progress;
+   const impacts=fx.filter(f=>f.type==='swordImpact').length;
    update(.1);
    const after=1000-e.hp;
-   const impacts=fx.filter(f=>f.type==='swordImpact').length;
    return {before,during,after,hits,visual,impacts};
  })()`);
  assert.equal(r.before,0);
@@ -536,9 +536,11 @@ test('sword swing only hits targets as they enter its arc',()=>{
    start('sword','physical');spawn=1000;
    const e=addEnemy('stone_golem');e.x=80*Math.cos(.9);e.y=80*Math.sin(.9);
    e.speed=0;e.hp=e.maxhp=1000;e.defense=0;
-   attack=0;update(.01);update(.09);
-   update(.1);const halfway=1000-e.hp;
-   update(.1);const completed=1000-e.hp;
+   p.action={stage:'windup',windup:.08,follow:.2,remaining:.08,aim:0,
+     target:{x:80,y:0},swingDirection:1};
+   fireWeapon();p.action.stage='follow';p.action.remaining=.2;
+   advanceSwordSwing(p.action,.1);const halfway=1000-e.hp;
+   advanceSwordSwing(p.action,.1);const completed=1000-e.hp;
    return {halfway,completed};
  })()`);
  assert.equal(r.halfway,0);
