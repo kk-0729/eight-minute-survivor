@@ -158,6 +158,15 @@ test('attack speed upgrade increases the rate of actual projectiles', () => {
   assert.ok(r.faster>r.normal,`normal ${r.normal}, faster ${r.faster}`);
 });
 
+test('unupgraded weapons can defeat the final boss in a controlled TTK trial', (t) => {
+  const { context }=gameContext();
+  const r=run(context, `(() => {let out={};for(const weapon of ['sword','crossbow','staff']){
+    start(weapon);spawn=1000;p.hp=1e6;let boss=addEnemy('boss');boss.x=70;boss.y=0;boss.speed=0;boss.shoot=1000;boss.dmg=0;
+    while(clock<200&&!boss.dead)update(.01);out[weapon]={dead:boss.dead,time:clock};}return out;})()`);
+  for(const weapon of ['sword','crossbow','staff'])assert.equal(r[weapon].dead,true,weapon);
+  t.diagnostic(`4000 HP / 12 DEF, no upgrades: sword ${r.sword.time.toFixed(1)}s, crossbow ${r.crossbow.time.toFixed(1)}s, staff ${r.staff.time.toFixed(1)}s`);
+});
+
 test('sword upgrades exclude multishot; ranged weapons retain it', () => {
   const { context } = gameContext();
   const result = run(context, `(() => {
