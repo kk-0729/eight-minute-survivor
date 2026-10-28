@@ -2,19 +2,20 @@
 const heroAtlas = new Image();
 heroAtlas.src = 'assets/characters/adventurers.png';
 function drawRenArm(action) {
-  let angle=-.15;
-  if(action){
-    const aim=action.aim??0;
-    if(action.stage==='windup') angle=aim-.35-.35*(1-action.remaining/action.windup);
-    else {const t=1-action.remaining/action.follow;angle=t<.55?aim-.7+1.4*t/.55:aim+.7-.85*(t-.55)/.45}
-  }
+  const angle=swordArmAngle(action);
+  const blade=swordElementPalette(p.element);
   c.save();c.translate(7,-1);c.rotate(angle);
   // The shoulder and sword move together; the character body stays in one pose.
   c.fillStyle='#f1e9d8';c.strokeStyle='#bd995f';c.lineWidth=1;
   c.beginPath();c.moveTo(0,-4);c.quadraticCurveTo(9,-5,13,1);c.lineTo(12,7);c.lineTo(3,7);c.closePath();c.fill();c.stroke();
   c.fillStyle='#f2c6a6';c.beginPath();c.arc(13,4,2.5,0,Math.PI*2);c.fill();
   c.strokeStyle='#4c3b30';c.lineWidth=2.4;c.beginPath();c.moveTo(11,4);c.lineTo(16,4);c.stroke();
-  c.fillStyle='#80344f';c.fillRect(11,2,10,4);c.fillStyle='#dda6ad';c.fillRect(18,-2,3,12);c.fillStyle='#db6f9b';c.fillRect(21,1,25,5);c.fillStyle='#ffe1eb';c.fillRect(23,1,20,2);c.fillRect(44,2,5,3)
+  c.fillStyle='#80344f';c.fillRect(11,2,10,4);
+  c.fillStyle='#dda6ad';c.fillRect(18,-2,3,12);
+  // The blade inherits the selected element; its tip leads the matching slash.
+  c.fillStyle=blade.impact;c.fillRect(21,1,25,5);
+  c.fillStyle=blade.inner;c.fillRect(23,1,20,2);
+  c.fillStyle='#fff8ed';c.fillRect(44,2,5,3)
   c.restore();
 }
 function drawRangedArm(weapon,action){
