@@ -167,7 +167,7 @@ function choose(){
     '<p class="muted">기본 공격력은 레벨당 5% 자동 증가. 아래에서 하나를 추가로 선택해요.</p>'+
     '<div class="choices">'+choices.map((u,i)=>'<button class="choice" data-n="'+i+'"><span class="tag">'+u.icon+' · '+
       (u.rarity==='rare'?'희귀 ':u.rarity==='common'?'일반 ':'')+
-      (u.category==='artifact'?'속성 아티팩트':u.weapon?'무기 전용':u.category==='route'?'루트 강화':'능력 강화')+
+      (u.weapon?'무기 전용':u.category==='route'?'루트 강화':u.element?'속성 아티팩트':'능력 강화')+
       '</span><strong>'+u.name+'</strong><small>'+u.desc+'</small></button>').join('')+'</div>'+
     '<p class="foot">속성 공격력 +1 고정 · 무기/속성 카드 우선 · 다른 속성은 나오지 않음</p>'+
     (p.rerolls>0?'<button id="reroll" class="reroll">선택지 새로고침 ('+p.rerolls+'회)</button>':'')+'</div>');
