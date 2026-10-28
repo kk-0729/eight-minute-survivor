@@ -41,7 +41,7 @@ function triggerAreaSkill(x,y,r,damage,element,applyStatus=false){
  const color={fire:'#fa763a',ice:'#83dafa',lightning:'#efce52'}[element]||'#c7b8e9';
  fx.push({type:'blast',x,y,r,life:.35,max:.35,color,element});
  for(const e of [...enemies]){
-   if(e.dead||Math.hypot(e.x-x,e.y-y)>=r+e.r)continue;
+   if(e.dead||(p.weapon!=='sword'&&!inWeaponRange(e))||Math.hypot(e.x-x,e.y-y)>=r+e.r)continue;
    hit(e,damage,true);
    if(!e.dead&&applyStatus&&element==='ice')applyIce(e);
    if(!e.dead&&applyStatus&&element==='fire')applyBurn(e,damage);
@@ -81,7 +81,7 @@ function pulseArtifactCards(dt){
    if(p.items.lightningArrow&&timer('lightningArrow',2.5))shotAtPoint(enemy.x,enemy.y,'lightning',skillPower(.62),'lightning',375);
    if(p.items.electroChakram&&timer('electroChakram',4)){triggerAreaSkill(enemy.x,enemy.y,75,skillPower(.8),'lightning');fx.push({type:'chakram',x:enemy.x,y:enemy.y,r:75,life:.5,max:.5})}
    if(p.items.thunderEarring&&timer('thunderEarring',4)){
-     let targets=enemies.filter(e=>!e.dead).sort((a,b)=>dist(a,p)-dist(b,p)).slice(0,2);
+     let targets=enemies.filter(e=>!e.dead&&inWeaponRange(e)).sort((a,b)=>dist(a,p)-dist(b,p)).slice(0,2);
      for(const e of targets){fx.push({type:'line',x:p.x,y:p.y,x2:e.x,y2:e.y,life:.2,max:.2});hit(e,skillPower(.5),true)}
    }
  }

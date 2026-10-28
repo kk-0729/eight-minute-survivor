@@ -28,7 +28,19 @@ function announce(s,t=2){document.querySelector('#notice').textContent=s;noticeT
 function makeHazard(type,x,y,angle=0){hazards.push({type,x,y,angle,wait:type==='meteor'?1.1:1.25,life:0,hit:false})}
 function bossPattern(e){let a=Math.atan2(p.y-e.y,p.x-e.x);if(e.type==='mini'){if(e.pattern++%2===0){for(let i=0;i<3;i++)makeHazard('meteor',p.x+rand(-100,100),p.y+rand(-100,100))}else makeHazard('slash',e.x,e.y,a)}else{if(e.pattern++%2===0)makeHazard('charge',e.x,e.y,a);else makeHazard('ring',e.x,e.y)} }
 function updateHazards(dt){for(const h of hazards){if(h.wait>0){h.wait-=dt;if(h.wait<=0){h.life=.35;let dx=p.x-h.x,dy=p.y-h.y,d=Math.hypot(dx,dy),along=dx*Math.cos(h.angle)+dy*Math.sin(h.angle),across=Math.abs(-dx*Math.sin(h.angle)+dy*Math.cos(h.angle));let inside=h.type==='meteor'?d<48:h.type==='ring'?d>65&&d<180:h.type==='slash'?d<145&&along>0&&across<85:along>0&&along<360&&across<42;if(inside&&p.inv<=0){p.hp-=h.type==='meteor'?15:22;p.inv=.75}fx.push({type:'blast',x:h.x,y:h.y,r:h.type==='meteor'?48:70,life:.3,max:.3,color:h.type==='meteor'?'#ffaf6b':'#bb7bea'})}}else h.life-=dt}hazards=hazards.filter(h=>h.wait>0||h.life>0)}
-function getNearest(){let best=null,d=1e9;for(const e of enemies){let x=dist(p,e);if(x<d){d=x;best=e}}return best}function fireWeapon(){
+// Ranged targeting follows the current viewport; the bow gets one sword range
+// beyond every edge. A target must have its centre inside this area.
+function inWeaponRange(target,weapon=p.weapon){
+ if(weapon==='sword')return dist(p,target)<=WEAPON_STATS.sword.range+(p.items.swordReach?18:0)+(target.r||0);
+ const extra=weapon==='crossbow'?WEAPON_STATS.sword.range:0;
+ return Math.abs(target.x-p.x)<=W/2+extra&&Math.abs(target.y-p.y)<=H/2+extra;
+}
+function projectileRange(angle,weapon){
+ const extra=weapon==='crossbow'?WEAPON_STATS.sword.range:0;
+ const x=Math.abs(Math.cos(angle)),y=Math.abs(Math.sin(angle));
+ return Math.min(x>1e-9?(W/2+extra)/x:Infinity,y>1e-9?(H/2+extra)/y:Infinity);
+}
+function getNearest(weapon=p.weapon){let best=null,d=Infinity;for(const e of enemies){if(e.dead||!inWeaponRange(e,weapon))continue;let x=dist(p,e);if(x<d){d=x;best=e}}return best}function fireWeapon(){
  const target=p.action?.target||getNearest();if(!target)return;
  const a=Math.atan2(target.y-p.y,target.x-p.x),w=WEAPON_STATS[p.weapon];
  if(p.weapon==='sword'){
@@ -50,7 +62,7 @@ function getNearest(){let best=null,d=1e9;for(const e of enemies){let x=dist(p,e
    for(let j=0;j<p.multi;j++){
      const angle=a+(j-(p.multi-1)/2)*.16;
      shots.push({x:p.x,y:p.y,vx:Math.cos(angle)*w.projectileSpeed,vy:Math.sin(angle)*w.projectileSpeed,
-       life:w.range/w.projectileSpeed,r:p.weapon==='crossbow'?4:7,weapon:p.weapon,
+       life:projectileRange(angle,p.weapon)/w.projectileSpeed,r:p.weapon==='crossbow'?4:7,weapon:p.weapon,
        element:p.element,pierce:w.pierce+(p.items.crossbowPierce?1:0)+(p.element==='ice'&&p.route==='B'&&p.lv>=10&&p.weapon==='crossbow'?1:0),
        hitTargets:new Set(),kind:p.weapon});
    }
@@ -82,11 +94,11 @@ function weaponHit(e,weapon,element){
  if(e.dead)return;const w=WEAPON_STATS[weapon],attacks={...p.attacks,[element]:levelAttack(p,element)};
  const result=calculateDirectDamage(attacks,element,w.coefficient,e.defense||0,p.critChance,p.critMultiplier);
  if(element==='fire'||p.items.fire)applyBurn(e,result.damage);if(element==='ice')applyIce(e);
- if(p.items.shock){e.shock++;if(p.items.chain){let other=chooseLightningTarget(e,enemies,115);if(other){fx.push({type:'line',x:e.x,y:e.y,x2:other.x,y2:other.y,life:.15,max:.15});hit(other,8,true)}}if(p.items.storm&&e.shock>=5){e.shock=0;blast(e.x,e.y,78,20,'#ffe078',false)}}
+ if(p.items.shock){e.shock++;if(p.items.chain){let other=chooseLightningTarget(e,enemies.filter(other=>p.weapon==='sword'||inWeaponRange(other)),115);if(other){fx.push({type:'line',x:e.x,y:e.y,x2:other.x,y2:other.y,life:.15,max:.15});hit(other,8,true)}}if(p.items.storm&&e.shock>=5){e.shock=0;blast(e.x,e.y,78,20,'#ffe078',false)}}
  hit(e,result.damage,false,result.critical);
  if(!e.dead)applyBuildHit(e,weapon,element,result.damage);
   onArtifactWeaponHit(e,weapon,element);
- if(element==='lightning'&&clock>=p.lightningReady[weapon]){let other=chooseLightningTarget(e,enemies,115);if(other){p.lightningReady[weapon]=clock+1;fx.push({type:'line',x:e.x,y:e.y,x2:other.x,y2:other.y,life:.15,max:.15});hit(other,result.damage*.4,true)}}
+ if(element==='lightning'&&clock>=p.lightningReady[weapon]){let other=chooseLightningTarget(e,enemies.filter(other=>p.weapon==='sword'||inWeaponRange(other)),115);if(other){p.lightningReady[weapon]=clock+1;fx.push({type:'line',x:e.x,y:e.y,x2:other.x,y2:other.y,life:.15,max:.15});hit(other,result.damage*.4,true)}}
 }
 
 // The base bonus budget is split into steady damage and a weapon/element-shaped
@@ -109,39 +121,39 @@ function applyBuildHit(enemy,weapon,element,baseDamage){
  fx.push({type:'blast',x:enemy.x,y:enemy.y,r:radius,life:.32,max:.32,color,element});
  if(element==='fire'){
    if(p.route==='A'){ // ember chain, fire ring and burn
-     for(const other of [...enemies])if(other!==enemy&&!other.dead&&dist(enemy,other)<radius){
+     for(const other of [...enemies])if(other!==enemy&&!other.dead&&(p.weapon==='sword'||inWeaponRange(other))&&dist(enemy,other)<radius){
        applyBurn(other,baseDamage*.35);hit(other,baseDamage*.4,true);
      }
    }else{ // sun blades / explosive bolts / staff meteors
      if(weapon==='staff')fx.push({type:'meteorImpact',x:enemy.x,y:enemy.y,r:radius,life:.35,max:.35});
      if(weapon==='sword')fx.push({type:'bladeImpact',x:enemy.x,y:enemy.y,element:'fire',life:.35,max:.35});
-     for(const other of [...enemies])if(other!==enemy&&!other.dead&&dist(enemy,other)<radius)
+     for(const other of [...enemies])if(other!==enemy&&!other.dead&&(p.weapon==='sword'||inWeaponRange(other))&&dist(enemy,other)<radius)
        hit(other,bonus*.18,true);
    }
  }else if(element==='ice'){
    if(p.route==='A'){ // frozen shroud and frostbite (bosses only slowed)
-     for(const other of [...enemies])if(other!==enemy&&!other.dead&&dist(enemy,other)<radius)applyIce(other);
+     for(const other of [...enemies])if(other!==enemy&&!other.dead&&(p.weapon==='sword'||inWeaponRange(other))&&dist(enemy,other)<radius)applyIce(other);
      enemy.iceRemaining=Math.max(enemy.iceRemaining||0,3);
      if(enemy.type!=='boss'&&enemy.type!=='mini')enemy.freezeRemaining=.65;
    }else{ // ice weaponry: blades / piercing ice needles / ice spears
       fx.push({type:'bladeImpact',x:enemy.x,y:enemy.y,element:'ice',life:.35,max:.35});
-     for(const other of [...enemies])if(other!==enemy&&!other.dead&&dist(enemy,other)<radius){
+     for(const other of [...enemies])if(other!==enemy&&!other.dead&&(p.weapon==='sword'||inWeaponRange(other))&&dist(enemy,other)<radius){
        applyIce(other);hit(other,bonus*.2,true);
      }
    }
  }else if(element==='lightning'){
    if(p.route==='A'){ // shock chain; greatsword sweep, bow sparks, rotating staff chakram
-     let other=chooseLightningTarget(enemy,enemies,radius+50);
+     let other=chooseLightningTarget(enemy,enemies.filter(other=>p.weapon==='sword'||inWeaponRange(other)),radius+50);
      if(other){fx.push({type:'line',x:enemy.x,y:enemy.y,x2:other.x,y2:other.y,life:.2,max:.2});
        hit(other,bonus*(weapon==='staff'?.65:.35),true)}
    }else{ // storm cloud consumption, visually stronger for staff
      fx.push({type:'stormStrike',x:enemy.x,y:enemy.y,life:.4,max:.4});
-     for(const other of [...enemies])if(other!==enemy&&!other.dead&&dist(enemy,other)<radius)
+     for(const other of [...enemies])if(other!==enemy&&!other.dead&&(p.weapon==='sword'||inWeaponRange(other))&&dist(enemy,other)<radius)
        hit(other,bonus*.28,true);
    }
  }
 }
-function blast(x,y,r,damage,color,spread){fx.push({type:'blast',x,y,r,life:.3,max:.3,color});for(const e of [...enemies])if(!e.dead&&Math.hypot(e.x-x,e.y-y)<r+e.r){if(spread)applyBurn(e,damage);hit(e,damage,true)}}function kill(e){if(e.dead)return;e.dead=true;kills++;fx.push({type:'death',x:e.x,y:e.y,r:e.r,life:.3,max:.3});if(e.type==='boss'){state='win';end(true);return}if(e.fire>0&&(p.items.ash||(p.element==='fire'&&p.route==='A')))blast(e.x,e.y,65,16,'#f6a359',!!p.items.ring||(p.element==='fire'&&p.route==='A'));gems.push({x:e.x,y:e.y,value:e.type==='mini'?15:e.type==='tank'?3:1});if(e.type==='mini'){p.hp=Math.min(p.maxhp,p.hp+30);levelQueue++;announce('듄켈 격파 · 강화 선택!',3)}}
+function blast(x,y,r,damage,color,spread){fx.push({type:'blast',x,y,r,life:.3,max:.3,color});for(const e of [...enemies])if(!e.dead&&(p.weapon==='sword'||inWeaponRange(e))&&Math.hypot(e.x-x,e.y-y)<r+e.r){if(spread)applyBurn(e,damage);hit(e,damage,true)}}function kill(e){if(e.dead)return;e.dead=true;kills++;fx.push({type:'death',x:e.x,y:e.y,r:e.r,life:.3,max:.3});if(e.type==='boss'){state='win';end(true);return}if(e.fire>0&&(p.items.ash||(p.element==='fire'&&p.route==='A')))blast(e.x,e.y,65,16,'#f6a359',!!p.items.ring||(p.element==='fire'&&p.route==='A'));gems.push({x:e.x,y:e.y,value:e.type==='mini'?15:e.type==='tank'?3:1});if(e.type==='mini'){p.hp=Math.min(p.maxhp,p.hp+30);levelQueue++;announce('듄켈 격파 · 강화 선택!',3)}}
 function chooseRoute(){
  state='route';
  const paths=BUILD_ROUTES[p.element];
@@ -243,7 +255,7 @@ if(attack<=0){
  }
 }
 for(const e of enemies){if(e.dead)continue;e.hit=Math.max(0,e.hit-dt);let slowedFor=Math.min(dt,e.iceRemaining||0);tickStatuses(e,dt,(enemy,damage)=>hit(enemy,damage,true,false,true));if(e.dead)continue;let d=dist(p,e),a=Math.atan2(p.y-e.y,p.x-e.x),speed=e.speed*(1-(dt>0?.2*slowedFor/dt:0));if(e.freezeRemaining>0)speed=0;a=steerEnemy(e,a);if(e.type==='mage'&&d<220)speed=d<140?-22:0;e.x+=Math.cos(a)*speed*dt;e.y+=Math.sin(a)*speed*dt;resolveTerrain(e);if(Math.abs(p.x-e.x)>1)e.facing=p.x<e.x?-1:1;if(e.type==='mage'){e.shoot-=dt;if(e.shoot<=0&&d<430){shots.push({x:e.x,y:e.y,vx:Math.cos(a)*150,vy:Math.sin(a)*150,life:3,r:6,kind:'enemy',damage:8});e.shoot=2.6}}if(e.type==='mini'||e.type==='boss'){e.shoot-=dt;if(e.shoot<=0){bossPattern(e);e.shoot=e.type==='boss'?3.8:4.8}}if(d<e.r+p.r&&p.inv<=0){p.hp-=e.dmg;p.inv=.65}if(p.hp<=0){end(false);return}}
-updateHazards(dt);if(p.hp<=0){end(false);return}pulseArtifactCards(dt);for(const s of shots){s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;if(s.kind==='enemy'){if(dist(s,p)<s.r+p.r&&p.inv<=0){p.hp-=s.damage;p.inv=.65;s.life=0;if(p.hp<=0){end(false);return}}}else for(const e of enemies){if(!e.dead&&!s.hitTargets.has(e)&&dist(s,e)<s.r+e.r){s.hitTargets.add(e);if(s.skillDamage!==undefined){hit(e,s.skillDamage,true);if(!e.dead&&s.element==='ice')applyIce(e);if(!e.dead&&s.element==='fire')applyBurn(e,s.skillDamage)}else weaponHit(e,s.weapon,s.element);if(s.pierce<=0){s.life=0;break}s.pierce--}}}shots=shots.filter(s=>s.life>0);enemies=enemies.filter(e=>!e.dead);for(const g of gems){let d=dist(g,p);if(d<p.magnet){let a=Math.atan2(p.y-g.y,p.x-g.x);g.x+=Math.cos(a)*Math.min(d,330*dt);g.y+=Math.sin(a)*Math.min(d,330*dt)}if(dist(g,p)<18){g.collected=true;p.xp+=g.value;while(p.xp>=p.need){p.xp-=p.need;p.lv++;p.need=Math.floor(p.need*1.18+2);levelQueue++}}}gems=gems.filter(g=>!g.collected);for(const f of fx)f.life-=dt;fx=fx.filter(f=>f.life>0);document.querySelector('#clock').textContent=fmt(clock);document.querySelector('#hptext').textContent=`체력 ${Math.ceil(p.hp)} / ${p.maxhp}`;document.querySelector('#hpbar').style.width=`${100*p.hp/p.maxhp}%`;document.querySelector('#lvtext').textContent=`LV. ${p.lv} · ${weapons[p.weapon].name} · ${ELEMENTS[p.element]}${p.route?' '+BUILD_ROUTES[p.element][p.route].name:''} · 속공 +${p.elementalStacks} · 처치 ${kills}`;document.querySelector('#xpbar').style.width=`${100*p.xp/p.need}%`;document.querySelector('#items').textContent='획득한 조합: '+(Object.keys(p.items).map(id=>upgrades.find(u=>u.id===id)?.name||id).join(' · ')||'아직 없음');if(levelQueue)choose()}
+updateHazards(dt);if(p.hp<=0){end(false);return}pulseArtifactCards(dt);for(const s of shots){const travel=Math.min(dt,Math.max(0,s.life));s.x+=s.vx*travel;s.y+=s.vy*travel;s.life-=dt;if(s.kind!=='enemy'&&!inWeaponRange(s,s.weapon||p.weapon)){s.life=0;continue}if(s.kind==='enemy'){if(dist(s,p)<s.r+p.r&&p.inv<=0){p.hp-=s.damage;p.inv=.65;s.life=0;if(p.hp<=0){end(false);return}}}else for(const e of enemies){if(!e.dead&&inWeaponRange(e,s.weapon||p.weapon)&&!s.hitTargets.has(e)&&dist(s,e)<s.r+e.r){s.hitTargets.add(e);if(s.skillDamage!==undefined){hit(e,s.skillDamage,true);if(!e.dead&&s.element==='ice')applyIce(e);if(!e.dead&&s.element==='fire')applyBurn(e,s.skillDamage)}else weaponHit(e,s.weapon,s.element);if(s.pierce<=0){s.life=0;break}s.pierce--}}}shots=shots.filter(s=>s.life>0);enemies=enemies.filter(e=>!e.dead);for(const g of gems){let d=dist(g,p);if(d<p.magnet){let a=Math.atan2(p.y-g.y,p.x-g.x);g.x+=Math.cos(a)*Math.min(d,330*dt);g.y+=Math.sin(a)*Math.min(d,330*dt)}if(dist(g,p)<18){g.collected=true;p.xp+=g.value;while(p.xp>=p.need){p.xp-=p.need;p.lv++;p.need=Math.floor(p.need*1.18+2);levelQueue++}}}gems=gems.filter(g=>!g.collected);for(const f of fx)f.life-=dt;fx=fx.filter(f=>f.life>0);document.querySelector('#clock').textContent=fmt(clock);document.querySelector('#hptext').textContent=`체력 ${Math.ceil(p.hp)} / ${p.maxhp}`;document.querySelector('#hpbar').style.width=`${100*p.hp/p.maxhp}%`;document.querySelector('#lvtext').textContent=`LV. ${p.lv} · ${weapons[p.weapon].name} · ${ELEMENTS[p.element]}${p.route?' '+BUILD_ROUTES[p.element][p.route].name:''} · 속공 +${p.elementalStacks} · 처치 ${kills}`;document.querySelector('#xpbar').style.width=`${100*p.xp/p.need}%`;document.querySelector('#items').textContent='획득한 조합: '+(Object.keys(p.items).map(id=>upgrades.find(u=>u.id===id)?.name||id).join(' · ')||'아직 없음');if(levelQueue)choose()}
 function render(){c.fillStyle='#131d1d';c.fillRect(0,0,W,H);if(!p)return;c.save();c.translate(W/2-p.x,H/2-p.y);drawGround();drawTerrain();for(const h of hazards){c.save();c.translate(h.x,h.y);c.rotate(h.angle);c.strokeStyle=h.type==='meteor'?'#ffb36a':'#da8bff';c.fillStyle=h.type==='meteor'?'#ff924d55':'#b36dff55';c.lineWidth=3;if(h.type==='meteor'){c.beginPath();c.arc(0,0,48,0,Math.PI*2);c.fill();c.stroke()}else if(h.type==='ring'){c.beginPath();c.arc(0,0,180,0,Math.PI*2);c.arc(0,0,65,0,Math.PI*2,true);c.fill('evenodd');c.stroke()}else if(h.type==='charge'){c.fillRect(0,-42,360,84);c.strokeRect(0,-42,360,84)}else{c.beginPath();c.moveTo(0,0);c.arc(0,0,145,-.65,.65);c.closePath();c.fill();c.stroke()}c.restore()}for(const g of gems){c.fillStyle='#91e7bd';c.save();c.translate(g.x,g.y);c.rotate(Math.PI/4);c.fillRect(-4,-4,8,8);c.restore()}for(const e of enemies){if(e.wind>0){c.beginPath();c.arc(e.x,e.y,110,0,7);c.fillStyle='#ee74742e';c.fill();c.strokeStyle='#ff8b88aa';c.stroke()}drawMonster(e);drawStatusEffects(e);c.save();c.strokeStyle='rgba(255,230,220,.55)';c.lineWidth=1;c.beginPath();c.arc(e.x,e.y,e.r,0,Math.PI*2);c.stroke();c.restore();if(e.fire>0){c.beginPath();c.arc(e.x,e.y,e.r+2,0,7)}if(e.fire>0){c.strokeStyle='#ffad64';c.lineWidth=3;c.stroke()}if(e.shock>0){c.fillStyle='#ffe87e';c.font='12px sans-serif';c.fillText('ϟ'+e.shock,e.x-7,e.y-e.r-9)}drawEnemyHealth(e)}for(const s of shots)drawProjectile(s);for(const f of fx){c.globalAlpha=Math.max(0,f.life/f.max);if(f.type==='swordArea')drawSwordArea(f);if(['meteorFall','meteorImpact','stormStrike','bladeImpact','chakram'].includes(f.type))drawSkillEffect(f);if(f.type==='arc'){c.strokeStyle='#f4e0a0';c.lineWidth=9;c.beginPath();c.arc(f.x,f.y,70,f.a-.7,f.a+.7);c.stroke()}if(f.type==='line'){c.strokeStyle='#ffe77f';c.lineWidth=2;c.beginPath();c.moveTo(f.x,f.y);let dx=f.x2-f.x,dy=f.y2-f.y,len=Math.hypot(dx,dy)||1;for(let i=1;i<6;i++){let k=i/6,offset=(i%2?1:-1)*4;c.lineTo(f.x+dx*k-dy/len*offset,f.y+dy*k+dx/len*offset)}c.lineTo(f.x2,f.y2);c.stroke()}if(f.type==='swordImpact'){
  c.save();c.strokeStyle=f.color;c.lineWidth=2.5;c.beginPath();
  const r=f.r*(.5+(1-f.life/f.max)*.7);

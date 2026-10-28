@@ -560,3 +560,48 @@ test('sword swing only hits targets as they enter its arc',()=>{
  assert.equal(r.halfway,0);
  assert.ok(r.completed>0);
 });
+
+test('staff targets the visible viewport and bow extends it by one sword range',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(()=>{
+  start('staff','ice');const inside=addEnemy('slime');inside.x=499;inside.y=349;const outside=addEnemy('slime');outside.x=501;outside.y=0;
+  const staff={inside:inWeaponRange(inside),outside:inWeaponRange(outside),nearest:getNearest()===inside};
+  p.weapon='crossbow';const bow={near:inWeaponRange(outside),edge:inWeaponRange({x:592,y:442}),outside:inWeaponRange({x:593,y:0})};
+  W=360;H=640;p.weapon='staff';const mobile={inside:inWeaponRange({x:180,y:320}),outside:inWeaponRange({x:181,y:0})};
+  p.x=100;p.y=50;const moved=inWeaponRange({x:280,y:370});
+  return {staff,bow,mobile,moved};
+ })()`);
+ assert.equal(r.staff.inside,true);assert.equal(r.staff.outside,false);assert.equal(r.staff.nearest,true);
+ assert.equal(r.bow.near,true);assert.equal(r.bow.edge,true);assert.equal(r.bow.outside,false);
+ assert.equal(r.mobile.inside,true);assert.equal(r.mobile.outside,false);assert.equal(r.moved,true);
+});
+
+test('automatic attacks and targeted artifacts do not select out-of-range enemies',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(()=>{
+  start('staff','fire');spawn=1000;const e=addEnemy('stone_golem');e.x=501;e.y=0;e.speed=0;p.items.meteorEye=true;
+  update(.05);pulseArtifactCards(6);const outside={action:!!p.action,pending:p.skillPending.length};
+  e.x=499;update(.05);pulseArtifactCards(6);return {outside,inside:{action:!!p.action,pending:p.skillPending.length}};
+ })()`);
+ assert.equal(r.outside.action,false);assert.equal(r.outside.pending,0);
+ assert.equal(r.inside.action,true);assert.equal(r.inside.pending,1);
+});
+
+test('ranged projectiles cannot hit targets beyond the current weapon viewport',()=>{
+ const {context}=gameContext();
+ for(const weapon of ['staff','crossbow']){
+  const r=run(context,`(()=>{
+   start('${weapon}','ice');spawn=1000;attack=1000;const edge=W/2+('${weapon}'==='crossbow'?92:0);
+   const e=addEnemy('stone_golem');e.x=edge+1;e.y=0;e.speed=0;const hp=e.hp;
+   shots.push({x:edge-2,y:0,vx:100,vy:0,life:1,r:7,weapon:'${weapon}',kind:'${weapon}',element:'ice',pierce:0,hitTargets:new Set()});
+   update(.05);return {damage:hp-e.hp,shots:shots.length};
+  })()`);
+  assert.equal(r.damage,0,weapon);assert.equal(r.shots,0,weapon);
+ }
+});
+
+test('staff area and lightning chain cannot damage enemies off screen',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(()=>{start('staff','lightning');const a=addEnemy('stone_golem'),b=addEnemy('stone_golem');a.x=495;a.y=0;a.hp=1000;b.x=501;b.y=0;b.hp=1000;weaponHit(a,'staff','lightning');const afterChain=b.hp;triggerAreaSkill(495,0,50,30,'lightning');return {afterChain,afterArea:b.hp}})()`);
+ assert.equal(r.afterChain,1000);assert.equal(r.afterArea,1000);
+});
