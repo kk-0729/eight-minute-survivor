@@ -78,6 +78,38 @@ test('damage, defense clamp, coefficients, and critical apply once', () => {
   assert.ok(Math.abs(r.high-2)<1e-9);assert.equal(r.negative,0);
 });
 
+test('first two minutes: normal enemies take one hit and strongest takes two with every weapon', () => {
+  const {context}=gameContext();
+  const result=run(context,`(() => {const out={};for(const weapon of ['sword','crossbow','staff']) {
+    start(weapon);out[weapon]=monsters.filter(m=>m[2]===0).map(m=>{
+      const e=addEnemy(m[0]),hp=e.hp,defense=e.defense;
+      const damage=calculateDirectDamage(BASE_ATTACK,'physical',WEAPON_STATS[weapon].coefficient,defense,0,1.5,1).damage;
+      return {type:m[0],hp,defense,hits:Math.ceil(hp/damage)};
+    });
+  }return out})()`);
+  for(const entries of Object.values(result)) {
+    assert.deepEqual(Array.from(entries, e=>e.hits),[1,1,1,1,2]);
+    assert.ok(entries.every(e=>e.defense===0));
+  }
+});
+
+test('attack upgrade adds ten percent of base attack per pick, not compound damage', () => {
+  const {context}=gameContext();
+  const result=run(context,`(() => {
+    start('sword');const u=upgrades.find(u=>u.id==='attack');
+    const removed=upgrades.every(u=>u.id!=='power' && !u.desc.includes('피해 +25%'));
+    const values=[0,1,2,5].map(n=>{
+      p.attackStacks=0;for(let i=0;i<n;i++)u.apply();
+      const e=addEnemy('stone_golem');e.hp=e.maxhp=1000;e.defense=0;
+      weaponHit(e,'sword','physical');return 1000-e.hp;
+    });
+    return {removed,values,stacks:p.attackStacks,description:u.desc};
+  })()`);
+  assert.equal(result.removed,true);
+  assert.deepEqual(Array.from(result.values),[20,22,24,30]);
+  assert.equal(result.stacks,5);
+});
+
 test('ice refreshes for two seconds without stacking', () => {
   const { context }=gameContext();
   const r=run(context, `(() => {let e={};applyIce(e);tickStatuses(e,1,()=>{});applyIce(e);
