@@ -422,3 +422,48 @@ test('oak coal shortens burn interval without extending burn duration',()=>{
  assert.ok(r.ticks.every(x=>x===3));
  assert.equal(r.expired,true);
 });
+
+test('weapon artifacts count lethal hits and activate once without recursive hits',()=>{
+ const {context}=gameContext();
+ const results=run(context,`(() => {
+  const out=[];
+  for(const [weapon,element,item] of [['sword','fire','swordWave'],['sword','fire','solarBlade'],['sword','ice','iceVine'],['crossbow','lightning','crossbowVolley'],['staff','ice','staffEcho'],['staff','fire','staffNova']]){
+   start(weapon,element);p.critChance=0;p.items[item]=true;
+   for(let i=0;i<4;i++){const e=addEnemy('slime');e.x=50+i*10;e.y=0;e.hp=1;weaponHit(e,weapon,element)}
+   out.push({item,count:p.artifactHits,kills,blasts:fx.filter(f=>f.type==='blast').length,shots:shots.length});
+  }
+  return out;
+ })()`);
+ for(const r of results){assert.equal(r.count,4,r.item);assert.equal(r.kills,4,r.item);
+  if(['swordWave','iceVine'].includes(r.item))assert.equal(r.blasts,1,r.item);
+  if(r.item==='staffNova')assert.equal(r.blasts,4,r.item);
+  if(['solarBlade','staffEcho'].includes(r.item))assert.equal(r.shots,1,r.item);
+  if(r.item==='crossbowVolley')assert.equal(r.shots,2,r.item);
+ }
+});
+
+test('all evolution choices improve their described route effect',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+  function scenario(evolution,n){
+   start('sword','fire');p.lv=14;p.route='B';p.evolution=evolution;
+   const e=addEnemy('stone_golem');e.x=40;e.y=0;e.hp=10000;
+   for(let i=0;i<n;i++)applyBuildHit(e,'sword','fire',20);
+   return {damage:10000-e.hp,radius:fx.find(f=>f.type==='blast')?.r||0};
+  }
+  return {base:scenario({},4),focus:scenario({6:'focus'},4),wide:scenario({6:'spread'},4),
+   heavy:scenario({10:'heavy'},4),rapid:scenario({10:'rapid'},3),
+   wide14:scenario({14:'spread'},4),focus14:scenario({14:'focus'},4),base3:scenario({},3)};
+ })()`);
+ assert.ok(r.focus.damage>r.base.damage);assert.equal(r.wide.radius,r.base.radius+25);
+ assert.ok(r.heavy.damage>r.base.damage);assert.ok(r.rapid.damage>r.base3.damage);
+ assert.equal(r.wide14.radius,r.base.radius+25);assert.ok(r.focus14.damage>r.base.damage);
+});
+
+test('elemental area effect records its element and renders without error',()=>{
+ const {context}=gameContext();
+ for(const element of ['fire','ice','lightning']){
+  const r=run(context,`(() => {start('staff','${element}');triggerAreaSkill(0,0,55,10,'${element}');const f=fx.find(x=>x.type==='blast');drawElementBurst(f);return f.element})()`);
+  assert.equal(r,element);
+ }
+});

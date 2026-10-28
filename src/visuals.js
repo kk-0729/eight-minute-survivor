@@ -106,3 +106,27 @@ function drawProjectile(s){
  else {c.fillStyle='#ed87a3';c.beginPath();c.arc(0,0,s.r,0,7);c.fill()}
  c.restore();
 }
+
+// Original, restrained pixel-inspired effects. Area decoration is clipped to the
+// same radius used for damage; the colour identifies the active element.
+function drawElementBurst(f){
+ const progress=1-f.life/f.max, radius=f.r;
+ const colors={fire:['#ec512b','#ff9c36','#ffe59a'],ice:['#3489dc','#90e5ff','#e9fbff'],lightning:['#a573cf','#ffd34c','#fff5bb']}[f.element];
+ if(!colors)return;
+ c.save();c.beginPath();c.arc(f.x,f.y,radius,0,Math.PI*2);c.clip();
+ c.globalAlpha*=.20;c.fillStyle=colors[0];c.beginPath();c.arc(f.x,f.y,radius*(.45+progress*.55),0,Math.PI*2);c.fill();
+ c.globalAlpha*=3;c.strokeStyle=colors[1];c.lineWidth=2;c.beginPath();c.arc(f.x,f.y,radius*(.35+progress*.58),0,Math.PI*2);c.stroke();
+ for(let i=0;i<8;i++){
+   const a=i*Math.PI/4+progress*.12, inner=radius*(.22+progress*.25), outer=radius*(.58+progress*.32);
+   c.save();c.translate(f.x,f.y);c.rotate(a);c.fillStyle=colors[i%2+1];
+   if(f.element==='ice'){
+     c.beginPath();c.moveTo(inner,-3);c.lineTo(outer,0);c.lineTo(inner,3);c.lineTo(inner-5,0);c.closePath();c.fill();
+   }else if(f.element==='fire'){
+     c.beginPath();c.moveTo(inner,-4);c.lineTo(outer,-2);c.lineTo(outer+5,0);c.lineTo(outer,3);c.lineTo(inner,4);c.closePath();c.fill();
+   }else{
+     c.strokeStyle=colors[2];c.lineWidth=2;c.beginPath();c.moveTo(inner,0);c.lineTo((inner+outer)/2,-5);c.lineTo((inner+outer)/2+3,3);c.lineTo(outer,0);c.stroke();
+   }
+   c.restore();
+ }
+ c.restore();
+}

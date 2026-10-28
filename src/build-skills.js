@@ -39,7 +39,7 @@ function shotAtPoint(x,y,element,damage,skillTag='bolt',speed=300,spread=0){
 }
 function triggerAreaSkill(x,y,r,damage,element,applyStatus=false){
  const color={fire:'#fa763a',ice:'#83dafa',lightning:'#efce52'}[element]||'#c7b8e9';
- fx.push({type:'blast',x,y,r,life:.35,max:.35,color});
+ fx.push({type:'blast',x,y,r,life:.35,max:.35,color,element});
  for(const e of [...enemies]){
    if(e.dead||Math.hypot(e.x-x,e.y-y)>=r+e.r)continue;
    hit(e,damage,true);
@@ -87,7 +87,7 @@ function pulseArtifactCards(dt){
  }
 }
 function onArtifactWeaponHit(enemy,weapon,element){
- if(!p.items||enemy.dead)return;
+ if(!p.items)return;
  p.artifactHits=(p.artifactHits||0)+1;
  const n=p.artifactHits;
  if(element==='fire'&&p.items.solarBlade&&n%4===0){
@@ -95,7 +95,7 @@ function onArtifactWeaponHit(enemy,weapon,element){
  }
  if(element==='ice'){
    if(p.items.iceVine&&n%4===0)triggerAreaSkill(enemy.x,enemy.y,52,skillPower(.45),element,true);
-   if(p.items.frozenHeart){
+   if(p.items.frozenHeart&&!enemy.dead){
      enemy.frostStacks=(enemy.frostStacks||0)+1;
      if(enemy.frostStacks>=5){enemy.frostStacks=0;enemy.iceRemaining=3;
        if(enemy.type!=='boss'&&enemy.type!=='mini')enemy.freezeRemaining=.8;
