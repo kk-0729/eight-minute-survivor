@@ -605,3 +605,52 @@ test('staff area and lightning chain cannot damage enemies off screen',()=>{
  const r=run(context,`(()=>{start('staff','lightning');const a=addEnemy('stone_golem'),b=addEnemy('stone_golem');a.x=495;a.y=0;a.hp=1000;b.x=501;b.y=0;b.hp=1000;weaponHit(a,'staff','lightning');const afterChain=b.hp;triggerAreaSkill(495,0,50,30,'lightning');return {afterChain,afterArea:b.hp}})()`);
  assert.equal(r.afterChain,1000);assert.equal(r.afterArea,1000);
 });
+
+test('boss presence halves regular spawn frequency and defeat restores it',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(()=>{
+  start('staff','ice');attack=1000;spawn=0;clock=240;boss4=true;
+  update(.01);const ordinary=spawn;
+  const boss=addEnemy('mini');boss.x=5000;boss.y=0;boss.speed=0;boss.shoot=1000;spawn=0;
+  update(.01);const during=spawn;
+  boss.dead=true;spawn=0;update(.01);return {ordinary,during,after:spawn};
+ })()`);
+ assert.ok(Math.abs(r.during/r.ordinary-2)<.001);assert.ok(Math.abs(r.after/r.ordinary-1)<.001);
+});
+
+test('boss locks during warning, attacks once, and cancels when defeated',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(()=>{
+  start('staff','ice');attack=1000;spawn=1000;const boss=addEnemy('mini');boss.x=100;boss.y=0;boss.shoot=1000;boss.pattern=1;
+  bossPattern(boss);const before=boss.x;update(.2);const locked=boss.x;const hp=p.hp;
+  for(let i=0;i<25;i++)update(.05);
+  const after=p.hp;const active=hazards.some(h=>h.wait<=0);p.inv=0;update(.05);const repeated=p.hp;
+  bossPattern(boss);boss.dead=true;updateHazards(.05);return {before,locked,hp,after,active,repeated,left:hazards.length};
+ })()`);
+ assert.equal(r.locked,r.before);assert.ok(r.after<r.hp);assert.equal(r.active,true);assert.equal(r.repeated,r.after);assert.equal(r.left,0);
+});
+
+test('final boss charge advances along its warning and strikes the player',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(()=>{
+  start('staff','ice');const boss=addEnemy('boss');boss.x=-180;boss.y=0;boss.pattern=0;bossPattern(boss);
+  const h=hazards[0];p.x=0;p.y=0;const hp=p.hp;updateHazards(1.25);const startX=boss.x;
+  for(let i=0;i<4;i++)updateHazards(.05);
+  return {startX,position:boss.x,hp,after:p.hp,active:h.wait<=0};
+ })()`);
+ assert.equal(r.startX,-180);assert.ok(r.position>r.startX);assert.ok(r.after<r.hp);assert.equal(r.active,true);
+});
+
+test('leveling heals 25 percent of maximum per level and actual direct damage grows',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(()=>{
+  start('staff','fire');attack=1000;spawn=1000;p.maxhp=200;p.hp=50;p.critChance=0;
+  const e=addEnemy('stone_golem');e.x=100;e.y=0;e.hp=10000;e.defense=0;e.speed=0;
+  weaponHit(e,'staff','fire');const base=10000-e.hp;
+  gems.push({x:p.x,y:p.y,value:p.need});update(.01);const lv=p.lv,hp=p.hp;
+  weaponHit(e,'staff','fire');const leveled=10000-e.hp-base;
+  upgrades.find(u=>u.id==='elemental').apply();weaponHit(e,'staff','fire');const upgraded=10000-e.hp-base-leveled;
+  return {lv,hp,base,leveled,upgraded};
+ })()`);
+ assert.equal(r.lv,2);assert.equal(r.hp,100);assert.ok(Math.abs(r.leveled/r.base-1.05)<1e-8);assert.ok(Math.abs(r.upgraded-r.leveled-.8)<1e-8);
+});

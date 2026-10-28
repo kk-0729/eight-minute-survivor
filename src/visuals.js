@@ -161,3 +161,23 @@ function drawSkillEffect(f){
  }
  c.restore();
 }
+
+// The warning and the active attack share the same geometry as hazardContains.
+function drawBossHazard(h){
+ const active=h.wait<=0;c.save();c.translate(h.x,h.y);c.rotate(h.angle);
+ c.lineWidth=active?5:2;c.strokeStyle=active?'#fff0cb':'#ffb36a';
+ c.fillStyle=active?'rgba(244,100,62,.65)':'rgba(237,93,73,.18)';
+ if(h.type==='meteor'){
+  c.beginPath();c.arc(0,0,48,0,Math.PI*2);c.fill();c.stroke();
+  if(active){c.fillStyle='#713c2c';c.beginPath();c.arc(0,0,21,0,Math.PI*2);c.fill();c.strokeStyle='#ffcc75';c.beginPath();c.moveTo(-15,-15);c.lineTo(-45,-55);c.stroke()}
+ }else if(h.type==='ring'){
+  c.beginPath();c.arc(0,0,180,0,Math.PI*2);c.arc(0,0,65,0,Math.PI*2,true);c.fill('evenodd');c.stroke();
+ }else if(h.type==='slash'){
+  const sweep=-.65+(1-h.life/h.duration)*1.3;
+  c.beginPath();c.moveTo(0,0);c.arc(0,0,145,active?sweep-.22:-.65,active?sweep+.22:.65);c.closePath();c.fill();c.stroke();
+  if(active){c.rotate(sweep);c.strokeStyle='#fff3dc';c.lineWidth=9;c.beginPath();c.moveTo(10,0);c.lineTo(145,0);c.stroke()}
+ }else if(active){
+  const x=(1-h.life/h.duration)*360;c.fillRect(x-30,-42,60,84);c.strokeRect(x-30,-42,60,84);
+ }else{c.fillRect(0,-42,360,84);c.strokeRect(0,-42,360,84)}
+ c.restore();
+}
