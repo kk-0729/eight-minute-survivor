@@ -312,3 +312,100 @@ test('midboss uses comparable defense and HP scaling',()=>{
  assert.equal(r.midDef,50);
  assert.equal(r.midDef,r.bossDef);
 });
+
+
+test('every normal level-up offers four unique cards and the selected element only', () => {
+ const {context}=gameContext();
+ const result=run(context,`(() => {
+   const answer={};
+   for (const element of ['fire','ice','lightning']){
+     for(const weapon of ['sword','crossbow','staff']){
+       start(weapon,element);p.lv=11;p.route='B';p.evolution[6]='spread';p.evolution[10]='rapid';
+       const choices=rollUpgrades();
+       answer[element+'/'+weapon]={ids:choices.map(c=>c.id),foreign:choices.some(c=>c.element&&c.element!==element),
+         wrongWeapon:choices.some(c=>c.weapon&&c.weapon!==weapon)};
+       levelQueue=1;choose();
+       answer[element+'/'+weapon].has4=overlay.innerHTML.includes('data-n="3"');
+       answer[element+'/'+weapon].reroll=overlay.innerHTML.includes('선택지 새로고침');
+     }
+   }
+   return answer;
+ })()`);
+ for(const [key,value] of Object.entries(result)){
+   assert.equal(value.ids.length,4,key);assert.equal(new Set(value.ids).size,4,key);
+   assert.equal(value.ids[0],'elemental',key);
+   assert.equal(value.foreign,false,key);assert.equal(value.wrongWeapon,false,key);
+   assert.equal(value.has4,true,key);assert.equal(value.reroll,true,key);
+ }
+});
+
+test('artifact cards unlock by level, are element locked and cannot repeat',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('sword','ice');p.lv=2;const early=availableUpgrades().map(x=>x.id);
+   p.lv=8;p.route='A';const late=availableUpgrades().map(x=>x.id);
+   upgrades.find(u=>u.id==='iceBolt').apply();
+   const after=availableUpgrades().map(x=>x.id);
+   return {early,late,after};
+ })()`);
+ assert.ok(r.early.includes('iceBolt')&&!r.early.includes('frozenHeart'));
+ assert.ok(r.late.includes('frozenHeart')&&r.late.includes('iceBolt'));
+ assert.ok(!r.late.includes('meteorEye')&&!r.late.includes('thunderEarring'));
+ assert.ok(!r.after.includes('iceBolt'));
+});
+
+test('weapon-only upgrades and elemental attacks produce visible gameplay effects',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('sword','ice');let enemy=addEnemy('stone_golem');enemy.x=118;enemy.y=0;enemy.speed=0;
+   p.action={target:{x:118,y:0}};fireWeapon();const before=enemy.hp;
+   p.items.swordReach=true;fireWeapon();const after=enemy.hp;
+   start('crossbow','ice');enemy=addEnemy('stone_golem');enemy.x=250;enemy.y=0;enemy.speed=0;
+   p.items.iceBolt=true;pulseArtifactCards(3.01);
+   const iceShots=shots.filter(s=>s.skillTag==='ice').length;
+   start('staff','fire');enemy=addEnemy('stone_golem');enemy.x=70;enemy.y=0;enemy.speed=0;
+   p.items.meteorEye=true;pulseArtifactCards(5.01);
+   const scheduled=p.skillPending.length;const hpBefore=enemy.hp;
+   pulseArtifactCards(.7);
+   return {before,after,iceShots,scheduled,meteorDamage:hpBefore-enemy.hp};
+ })()`);
+ assert.equal(r.before,110);
+ assert.ok(r.after<r.before);
+ assert.equal(r.iceShots,2);assert.equal(r.scheduled,1);assert.ok(r.meteorDamage>0);
+});
+
+test('three evolutionary milestones offer explicit direction choices',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   const result={};
+   for(const lv of [6,10,14]){
+     start('staff','lightning');p.route='B';p.lv=lv;levelQueue=1;
+     for(const earlier of [6,10,14])if(earlier<lv)p.evolution[earlier]='spread';
+     choose();result[lv]={state,menu:overlay.innerHTML};
+   }
+   return result;
+ })()`);
+ for(const lv of [6,10,14]){
+   assert.equal(r[lv].state,'evolution');
+   assert.ok(r[lv].menu.includes('data-n="1"'));
+   assert.ok(r[lv].menu.includes('기술 진화'));
+ }
+});
+
+test('Sephiria-inspired element cards trigger different nonhoming effects',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   const out={};
+   for(const element of ['fire','ice','lightning']){
+     start('staff',element);p.lv=8;p.route='A';spawn=1000;
+     const target=addEnemy('stone_golem');target.x=70;target.y=0;target.hp=target.maxhp=1000;target.speed=0;
+     const id={fire:'phoenixFeather',ice:'glacierEcho',lightning:'electroChakram'}[element];
+     p.items[id]=true;pulseArtifactCards(5);
+     out[element]={shots:shots.length,fx:fx.map(x=>x.type),damage:1000-target.hp};
+   }
+   return out;
+ })()`);
+ assert.ok(r.fire.shots>0);
+ assert.ok(r.ice.fx.includes('blast')&&r.ice.damage>0);
+ assert.ok(r.lightning.fx.includes('blast')&&r.lightning.damage>0);
+});
