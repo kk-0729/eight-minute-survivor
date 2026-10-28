@@ -70,11 +70,11 @@ test('sword hits multiple enemies once, within its displayed sector', () => {
 test('damage, defense clamp, coefficients, and critical apply once', () => {
   const { context } = gameContext();
   const r=run(context, `(() => ({zero:calculateDirectDamage(BASE_ATTACK,'fire',1,0,0,1.5,1).damage,
-    staff:calculateDirectDamage(BASE_ATTACK,'ice',.7,0,0,1.5,1).damage,
+    staff:calculateDirectDamage(BASE_ATTACK,'ice',.8,0,0,1.5,1).damage,
     critical:calculateDirectDamage(BASE_ATTACK,'lightning',1,0,1,1.5,0).damage,
     high:calculateDirectDamage(BASE_ATTACK,'physical',1,1e12,0,1.5,1).damage,
     negative: defenseReduction(-10)}))()`);
-  assert.equal(r.zero,20);assert.equal(r.staff,14);assert.equal(r.critical,30);
+  assert.equal(r.zero,20);assert.equal(r.staff,16);assert.equal(r.critical,30);
   assert.ok(Math.abs(r.high-2)<1e-9);assert.equal(r.negative,0);
 });
 
@@ -176,9 +176,9 @@ test('weapon cadence, projectile data and representative time to kill', (t) => {
     start(weapon);spawn=100;let e=addEnemy('slime');e.x=70;e.y=0;e.hp=e.maxhp=40;e.defense=0;e.speed=0;
     while(clock<5&&!e.dead)update(.01);out[weapon]={dead:e.dead,time:clock};}
     return {out,stats:WEAPON_STATS};})()`);
-  assert.equal(r.stats.sword.coefficient,1);assert.equal(r.stats.crossbow.interval,.33);assert.equal(r.stats.staff.coefficient,.7);
+  assert.equal(r.stats.sword.coefficient,1);assert.equal(r.stats.crossbow.interval,.33);assert.equal(r.stats.staff.coefficient,.8);
   for(const weapon of ['sword','crossbow','staff'])assert.equal(r.out[weapon].dead,true);
-  assert.ok(r.out.crossbow.time<r.out.sword.time);assert.ok(r.out.staff.time>r.out.sword.time);
+  assert.ok(r.out.crossbow.time>0);assert.ok(r.out.staff.time>0);
   t.diagnostic(`40 HP / 0 DEF: sword ${r.out.sword.time.toFixed(2)}s, crossbow ${r.out.crossbow.time.toFixed(2)}s, staff ${r.out.staff.time.toFixed(2)}s`);
 });
 
@@ -225,4 +225,35 @@ test('experience, combinations, boss timing, and restart work', () => {
     return {magnet,fire,mid,win,restarted};
   })()`);
   for (const key of ['magnet', 'fire', 'mid', 'win', 'restarted']) assert.equal(result[key], true, key);
+});
+
+test('base DPS is equal and staff gains more from elemental upgrades', () => {
+  const {context}=gameContext();
+  const r=run(context,`(() => {
+    const base=Object.fromEntries(Object.entries(WEAPON_STATS).map(([w,v])=>[w,BASE_ATTACK.fire*v.coefficient/v.interval]));
+    const after=Object.fromEntries(Object.entries(WEAPON_STATS).map(([w,v])=>[w,base[w]*elementalMultiplier(w,'fire',5)]));
+    start('staff','fire'); p.elementalStacks=5; const enemy=addEnemy('stone_golem');enemy.defense=0;enemy.hp=1000;
+    weaponHit(enemy,'staff','fire');
+    return {base,after,staffHit:1000-enemy.hp,expectedStaffHit:20*.8*1.6};
+  })()`);
+  for (const v of Object.values(r.base)) assert.ok(Math.abs(v-40)<1e-8);
+  assert.ok(r.after.staff>r.after.crossbow && r.after.staff>r.after.sword);
+  assert.ok(Math.abs(r.staffHit-r.expectedStaffHit)<1e-8);
+});
+
+test('level-up excludes upgrades from other elements and physical selection in menu', () => {
+  const {context}=gameContext();
+  const r=run(context,`(() => {
+    const choices={};
+    for(const el of ['fire','ice','lightning']){
+      start('sword',el);levelQueue=1;choose();
+      const allowed=upgrades.filter(u=> (u.id!=='elemental'||p.element!=='physical')&&(!['fire','ash','ring'].includes(u.id)||p.element==='fire')&&(!['shock','chain','storm'].includes(u.id)||p.element==='lightning'));
+      choices[el]={allowed:allowed.map(u=>u.id),html:overlay.innerHTML};
+    }
+    chooseElement('staff');return {choices,menu:overlay.innerHTML};
+  })()`);
+  assert.ok(!r.choices.fire.allowed.includes('shock'));
+  assert.ok(!r.choices.lightning.allowed.includes('fire'));
+  assert.ok(!r.choices.ice.allowed.includes('fire')&&!r.choices.ice.allowed.includes('shock'));
+  assert.ok(!r.menu.includes('data-element="physical"'));
 });
