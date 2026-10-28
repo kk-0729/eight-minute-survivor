@@ -50,7 +50,7 @@ function triggerAreaSkill(x,y,r,damage,element,applyStatus=false){
 function queueMeteor(x,y,damage,element='fire',radius=60,delay=.6){
  if(!p.skillPending)p.skillPending=[];
  p.skillPending.push({x,y,damage,element,radius,delay});
- fx.push({type:'rune',x,y,r:radius,life:delay,max:delay,color:'#fa9c54'});
+ fx.push({type:'meteorFall',x,y,r:radius,life:delay,max:delay});
 }
 function pulseArtifactCards(dt){
  if(!p||!p.items||!p.element)return;
@@ -79,7 +79,7 @@ function pulseArtifactCards(dt){
    if(p.items.glacierEcho&&timer('glacierEcho',4))triggerAreaSkill(p.x,p.y,125,skillPower(.35),'ice',true);
  }else if(p.element==='lightning'){
    if(p.items.lightningArrow&&timer('lightningArrow',2.5))shotAtPoint(enemy.x,enemy.y,'lightning',skillPower(.62),'lightning',375);
-   if(p.items.electroChakram&&timer('electroChakram',4))triggerAreaSkill(enemy.x,enemy.y,75,skillPower(.8),'lightning');
+   if(p.items.electroChakram&&timer('electroChakram',4)){triggerAreaSkill(enemy.x,enemy.y,75,skillPower(.8),'lightning');fx.push({type:'chakram',x:enemy.x,y:enemy.y,r:75,life:.5,max:.5})}
    if(p.items.thunderEarring&&timer('thunderEarring',4)){
      let targets=enemies.filter(e=>!e.dead).sort((a,b)=>dist(a,p)-dist(b,p)).slice(0,2);
      for(const e of targets){fx.push({type:'line',x:p.x,y:p.y,x2:e.x,y2:e.y,life:.2,max:.2});hit(e,skillPower(.5),true)}

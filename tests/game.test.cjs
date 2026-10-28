@@ -467,3 +467,17 @@ test('elemental area effect records its element and renders without error',()=>{
   assert.equal(r,element);
  }
 });
+
+test('meteor falls before damaging its fixed impact area',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(()=>{start('staff','fire');const e=addEnemy('stone_golem');e.x=80;e.y=0;e.hp=1000;queueMeteor(80,0,30,'fire',60,.6);const warning=fx.find(f=>f.type==='meteorFall');drawSkillEffect(warning);pulseArtifactCards(.3);const before=e.hp;pulseArtifactCards(.31);return {warning:!!warning,before,after:e.hp,blast:fx.some(f=>f.type==='blast'&&f.element==='fire')};})()`);
+ assert.equal(r.warning,true);assert.equal(r.before,1000);assert.equal(r.after,970);assert.equal(r.blast,true);
+});
+
+test('route-specific skill visuals accompany real periodic damage',()=>{
+ const {context}=gameContext();
+ for(const [weapon,element,route,visual] of [['staff','fire','B','meteorImpact'],['sword','fire','B','bladeImpact'],['staff','ice','B','bladeImpact'],['crossbow','lightning','B','stormStrike']]){
+  const result=run(context,`(()=>{start('${weapon}','${element}');p.route='${route}';p.lv=18;const e=addEnemy('stone_golem');e.x=60;e.y=0;e.hp=10000;for(let i=0;i<4;i++)applyBuildHit(e,'${weapon}','${element}',20);const f=fx.find(x=>x.type==='${visual}');if(f)drawSkillEffect(f);return {seen:!!f,hp:e.hp}})()`);
+  assert.ok(result.seen,weapon+'/'+element+'/'+route);assert.ok(result.hp<10000);
+ }
+});

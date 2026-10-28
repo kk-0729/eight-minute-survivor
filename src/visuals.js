@@ -98,7 +98,7 @@ function drawHero() {
 function drawProjectile(s){
  c.save();c.translate(s.x,s.y);c.rotate(Math.atan2(s.vy,s.vx));
  const color={physical:'#f4dfad',fire:'#ff8649',ice:'#9adfff',lightning:'#ffec74'}[s.element]||'#ed87a3';
- if(s.skillTag==='solar'){c.fillStyle='#ffa54b';c.fillRect(-10,-4,20,8);c.fillStyle='#ffe9a4';c.fillRect(1,-3,9,6)}
+ if(s.skillTag==='solar'){drawFlyingBlade('#ff682c','#ffe49b')}
  else if(s.skillTag==='ice'){c.fillStyle='#d3f5ff';c.beginPath();c.moveTo(14,0);c.lineTo(-7,-5);c.lineTo(-4,0);c.lineTo(-7,5);c.closePath();c.fill()}
  else if(s.skillTag==='feather'){c.fillStyle='#ffac56';c.beginPath();c.ellipse(0,0,12,4,0,0,7);c.fill()}
  else if(s.kind==='crossbow'){c.fillStyle=color;c.fillRect(-11,-1,21,3);c.fillRect(6,-3,5,7);c.fillStyle='#e7e1c9';c.fillRect(-10,-4,3,8)}
@@ -114,10 +114,10 @@ function drawElementBurst(f){
  const colors={fire:['#ec512b','#ff9c36','#ffe59a'],ice:['#3489dc','#90e5ff','#e9fbff'],lightning:['#a573cf','#ffd34c','#fff5bb']}[f.element];
  if(!colors)return;
  c.save();c.beginPath();c.arc(f.x,f.y,radius,0,Math.PI*2);c.clip();
- c.globalAlpha*=.20;c.fillStyle=colors[0];c.beginPath();c.arc(f.x,f.y,radius*(.45+progress*.55),0,Math.PI*2);c.fill();
- c.globalAlpha*=3;c.strokeStyle=colors[1];c.lineWidth=2;c.beginPath();c.arc(f.x,f.y,radius*(.35+progress*.58),0,Math.PI*2);c.stroke();
- for(let i=0;i<8;i++){
-   const a=i*Math.PI/4+progress*.12, inner=radius*(.22+progress*.25), outer=radius*(.58+progress*.32);
+ c.globalAlpha*=.30;c.fillStyle=colors[0];c.beginPath();c.arc(f.x,f.y,radius*(.45+progress*.55),0,Math.PI*2);c.fill();
+ c.globalAlpha*=2.5;c.strokeStyle=colors[1];c.lineWidth=2;c.beginPath();c.arc(f.x,f.y,radius*(.35+progress*.58),0,Math.PI*2);c.stroke();
+ for(let i=0;i<12;i++){
+   const a=i*Math.PI/6+progress*.12, inner=radius*(.22+progress*.25), outer=radius*(.58+progress*.32);
    c.save();c.translate(f.x,f.y);c.rotate(a);c.fillStyle=colors[i%2+1];
    if(f.element==='ice'){
      c.beginPath();c.moveTo(inner,-3);c.lineTo(outer,0);c.lineTo(inner,3);c.lineTo(inner-5,0);c.closePath();c.fill();
@@ -127,6 +127,37 @@ function drawElementBurst(f){
      c.strokeStyle=colors[2];c.lineWidth=2;c.beginPath();c.moveTo(inner,0);c.lineTo((inner+outer)/2,-5);c.lineTo((inner+outer)/2+3,3);c.lineTo(outer,0);c.stroke();
    }
    c.restore();
+ }
+ c.restore();
+}
+
+// Hand-drawn effects; trails are decorative, damage remains at the existing hit location.
+function drawFlyingBlade(edge,core){
+ c.fillStyle='#a73422';c.fillRect(-18,-2,9,4);c.fillStyle='#f6c773';c.fillRect(-11,-7,3,14);
+ c.fillStyle=edge;c.beginPath();c.moveTo(-8,-5);c.lineTo(12,-5);c.lineTo(21,0);c.lineTo(12,5);c.lineTo(-8,5);c.closePath();c.fill();
+ c.fillStyle=core;c.fillRect(-5,-2,18,4);c.fillStyle='#ff8e35';c.fillRect(-18,-8,8,3);c.fillRect(-23,5,11,3);
+}
+function drawSkillEffect(f){
+ const t=1-f.life/f.max;
+ c.save();c.translate(f.x,f.y);
+ if(f.type==='meteorFall'||f.type==='meteorImpact'){
+  const y=f.type==='meteorFall'?-175*(1-t):0;
+  if(f.type==='meteorFall'){
+   c.strokeStyle='#ffbd63';c.lineWidth=2;c.beginPath();c.arc(0,0,f.r,0,Math.PI*2);c.stroke();
+  }
+  c.fillStyle='rgba(255,77,22,.5)';c.beginPath();c.moveTo(-11,y-8);c.lineTo(-55,y-72);c.lineTo(-12,y-32);c.lineTo(18,y-12);c.closePath();c.fill();
+  c.fillStyle='#ff9a2e';c.beginPath();c.arc(0,y,18,0,Math.PI*2);c.fill();
+  c.fillStyle='#663224';c.beginPath();c.arc(0,y,12,0,Math.PI*2);c.fill();c.fillStyle='#ffc05d';c.fillRect(-7,y-8,7,4);
+ }else if(f.type==='stormStrike'){
+  c.fillStyle='#332a54';for(const [x,y,r] of [[-21,-63,16],[0,-71,20],[20,-63,16]]){c.beginPath();c.arc(x,y,r,0,7);c.fill()}
+  c.fillStyle='#73558d';c.fillRect(-31,-64,62,8);
+  c.strokeStyle='#ffc643';c.lineWidth=7;c.beginPath();c.moveTo(4,-58);c.lineTo(-10,-33);c.lineTo(4,-34);c.lineTo(-6,-4);c.stroke();
+  c.strokeStyle='#fff7ca';c.lineWidth=2;c.stroke();
+ }else if(f.type==='bladeImpact'){
+  c.rotate(-.75);drawFlyingBlade(f.element==='ice'?'#57c9f5':'#ff682c',f.element==='ice'?'#e6fbff':'#ffe49b');
+ }else if(f.type==='chakram'){
+  c.rotate(t*5);c.strokeStyle='#f9d95f';c.lineWidth=4;c.beginPath();c.arc(0,0,f.r*.7,0,Math.PI*2);c.stroke();
+  for(let i=0;i<4;i++){c.rotate(Math.PI/2);c.fillStyle='#fff4ad';c.fillRect(f.r*.65,-3,12,6)}
  }
  c.restore();
 }
