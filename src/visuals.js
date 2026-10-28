@@ -98,7 +98,10 @@ function drawHero() {
 function drawProjectile(s){
  c.save();c.translate(s.x,s.y);c.rotate(Math.atan2(s.vy,s.vx));
  const color={physical:'#f4dfad',fire:'#ff8649',ice:'#9adfff',lightning:'#ffec74'}[s.element]||'#ed87a3';
- if(s.kind==='crossbow'){c.fillStyle=color;c.fillRect(-11,-1,21,3);c.fillRect(6,-3,5,7);c.fillStyle='#e7e1c9';c.fillRect(-10,-4,3,8)}
+ if(s.skillTag==='solar'){c.fillStyle='#ffa54b';c.fillRect(-10,-4,20,8);c.fillStyle='#ffe9a4';c.fillRect(1,-3,9,6)}
+ else if(s.skillTag==='ice'){c.fillStyle='#d3f5ff';c.beginPath();c.moveTo(14,0);c.lineTo(-7,-5);c.lineTo(-4,0);c.lineTo(-7,5);c.closePath();c.fill()}
+ else if(s.skillTag==='feather'){c.fillStyle='#ffac56';c.beginPath();c.ellipse(0,0,12,4,0,0,7);c.fill()}
+ else if(s.kind==='crossbow'){c.fillStyle=color;c.fillRect(-11,-1,21,3);c.fillRect(6,-3,5,7);c.fillStyle='#e7e1c9';c.fillRect(-10,-4,3,8)}
  else if(s.kind==='staff'){c.fillStyle=color;c.fillRect(-8,-5,15,10);c.fillStyle='#fff2ce';c.fillRect(-1,-3,7,6)}
  else {c.fillStyle='#ed87a3';c.beginPath();c.arc(0,0,s.r,0,7);c.fill()}
  c.restore();

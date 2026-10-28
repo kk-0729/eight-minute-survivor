@@ -70,11 +70,11 @@ test('sword hits multiple enemies once, within its displayed sector', () => {
 test('damage, defense clamp, coefficients, and critical apply once', () => {
   const { context } = gameContext();
   const r=run(context, `(() => ({zero:calculateDirectDamage(BASE_ATTACK,'fire',1,0,0,1.5,1).damage,
-    staff:calculateDirectDamage(BASE_ATTACK,'ice',.7,0,0,1.5,1).damage,
+    staff:calculateDirectDamage(BASE_ATTACK,'ice',.8,0,0,1.5,1).damage,
     critical:calculateDirectDamage(BASE_ATTACK,'lightning',1,0,1,1.5,0).damage,
     high:calculateDirectDamage(BASE_ATTACK,'physical',1,1e12,0,1.5,1).damage,
     negative: defenseReduction(-10)}))()`);
-  assert.equal(r.zero,20);assert.equal(r.staff,14);assert.equal(r.critical,30);
+  assert.equal(r.zero,20);assert.equal(r.staff,16);assert.equal(r.critical,30);
   assert.ok(Math.abs(r.high-2)<1e-9);assert.equal(r.negative,0);
 });
 
@@ -93,21 +93,16 @@ test('first two minutes: normal enemies take one hit and strongest takes two wit
   }
 });
 
-test('attack upgrade adds ten percent of base attack per pick, not compound damage', () => {
+test('each level grants +5% base attack; element card adds exactly +1', () => {
   const {context}=gameContext();
-  const result=run(context,`(() => {
-    start('sword');const u=upgrades.find(u=>u.id==='attack');
-    const removed=upgrades.every(u=>u.id!=='power' && !u.desc.includes('피해 +25%'));
-    const values=[0,1,2,5].map(n=>{
-      p.attackStacks=0;for(let i=0;i<n;i++)u.apply();
-      const e=addEnemy('stone_golem');e.hp=e.maxhp=1000;e.defense=0;
-      weaponHit(e,'sword','physical');return 1000-e.hp;
-    });
-    return {removed,values,stacks:p.attackStacks,description:u.desc};
+  const r=run(context,`(() => {
+    start('sword','fire'); const attr=upgrades.find(u=>u.id==='elemental');
+    const initial=levelAttack(p,'fire');p.lv=18;
+    const at18=levelAttack(p,'fire');for(let i=0;i<4;i++)attr.apply();
+    return {initial,at18,after:levelAttack(p,'fire'),stacks:p.elementalStacks,hasOld:upgrades.some(u=>u.id==='attack')};
   })()`);
-  assert.equal(result.removed,true);
-  assert.deepEqual(Array.from(result.values),[20,22,24,30]);
-  assert.equal(result.stacks,5);
+  assert.equal(r.initial,20);assert.equal(r.at18,37);
+  assert.equal(r.after,41);assert.equal(r.stacks,4);assert.equal(r.hasOld,false);
 });
 
 test('ice refreshes for two seconds without stacking', () => {
@@ -167,7 +162,8 @@ test('lightning hits one other target, has a per-weapon cooldown, and cannot rec
     weaponHit(enemiesHere[0],'crossbow','lightning');weaponHit(enemiesHere[0],'crossbow','lightning');
     let first=enemiesHere.map(e=>500-e.hp);clock=1;weaponHit(enemiesHere[0],'crossbow','lightning');
     return {first,after:enemiesHere.map(e=>500-e.hp),lines:fx.filter(f=>f.type==='line').length};})()`);
-  assert.deepEqual(Array.from(r.first),[40,8,0]);assert.deepEqual(Array.from(r.after),[60,16,0]);assert.equal(r.lines,2);
+  assert.ok(Math.abs(r.first[0]-26.4)<1e-8);assert.ok(Math.abs(r.first[1]-5.28)<1e-8);assert.equal(r.first[2],0);
+  assert.ok(Math.abs(r.after[0]-39.6)<1e-8);assert.ok(Math.abs(r.after[1]-10.56)<1e-8);assert.equal(r.lines,2);
 });
 
 test('weapon cadence, projectile data and representative time to kill', (t) => {
@@ -176,9 +172,9 @@ test('weapon cadence, projectile data and representative time to kill', (t) => {
     start(weapon);spawn=100;let e=addEnemy('slime');e.x=70;e.y=0;e.hp=e.maxhp=40;e.defense=0;e.speed=0;
     while(clock<5&&!e.dead)update(.01);out[weapon]={dead:e.dead,time:clock};}
     return {out,stats:WEAPON_STATS};})()`);
-  assert.equal(r.stats.sword.coefficient,1);assert.equal(r.stats.crossbow.interval,.33);assert.equal(r.stats.staff.coefficient,.7);
+  assert.equal(r.stats.sword.coefficient,1);assert.equal(r.stats.crossbow.interval,.33);assert.equal(r.stats.staff.coefficient,.8);
   for(const weapon of ['sword','crossbow','staff'])assert.equal(r.out[weapon].dead,true);
-  assert.ok(r.out.crossbow.time<r.out.sword.time);assert.ok(r.out.staff.time>r.out.sword.time);
+  assert.ok(r.out.crossbow.time>0);assert.ok(r.out.staff.time>0);
   t.diagnostic(`40 HP / 0 DEF: sword ${r.out.sword.time.toFixed(2)}s, crossbow ${r.out.crossbow.time.toFixed(2)}s, staff ${r.out.staff.time.toFixed(2)}s`);
 });
 
@@ -196,13 +192,13 @@ test('unupgraded weapons can defeat the final boss in a controlled TTK trial', (
     start(weapon);spawn=1000;p.hp=1e6;let boss=addEnemy('boss');boss.x=70;boss.y=0;boss.speed=0;boss.shoot=1000;boss.dmg=0;
     while(clock<200&&!boss.dead)update(.01);out[weapon]={dead:boss.dead,time:clock};}return out;})()`);
   for(const weapon of ['sword','crossbow','staff'])assert.equal(r[weapon].dead,true,weapon);
-  t.diagnostic(`4000 HP / 12 DEF, no upgrades: sword ${r.sword.time.toFixed(1)}s, crossbow ${r.crossbow.time.toFixed(1)}s, staff ${r.staff.time.toFixed(1)}s`);
+  t.diagnostic(`4000 HP / 50 DEF, no upgrades: sword ${r.sword.time.toFixed(1)}s, crossbow ${r.crossbow.time.toFixed(1)}s, staff ${r.staff.time.toFixed(1)}s`);
 });
 
 test('sword upgrades exclude multishot; ranged weapons retain it', () => {
   const { context } = gameContext();
   const result = run(context, `(() => {
-    const candidates=upgrades.filter(u=>['power','speed','multi','vital'].includes(u.id));
+    const candidates=upgrades.filter(u=>['elemental','speed','multi','vital'].includes(u.id));
     upgrades.splice(0,upgrades.length,...candidates);const oldRandom=Math.random;Math.random=()=>.5;
     start('sword');levelQueue=1;choose();let found=overlay.innerHTML.includes('다중 공격');
     start('crossbow');levelQueue=1;choose();let ranged=overlay.innerHTML.includes('다중 공격');Math.random=oldRandom;
@@ -225,4 +221,204 @@ test('experience, combinations, boss timing, and restart work', () => {
     return {magnet,fire,mid,win,restarted};
   })()`);
   for (const key of ['magnet', 'fire', 'mid', 'win', 'restarted']) assert.equal(result[key], true, key);
+});
+
+test('base DPS is equal and all weapons use the same +1 element attack cards', () => {
+  const {context}=gameContext();
+  const r=run(context,`(() => {
+    const base=Object.fromEntries(Object.entries(WEAPON_STATS).map(([w,v])=>[w,BASE_ATTACK.fire*v.coefficient/v.interval]));
+    const after=Object.fromEntries(Object.entries(WEAPON_STATS).map(([w,v])=>[w,41*v.coefficient/v.interval]));
+    start('staff','fire'); p.lv=18;p.elementalStacks=4;
+    return {base,after,staffDirect:levelAttack(p,'fire')*WEAPON_STATS.staff.coefficient};
+  })()`);
+  for(const v of Object.values(r.base)) assert.ok(Math.abs(v-40)<1e-8);
+  for(const v of Object.values(r.after)) assert.ok(Math.abs(v-82)<1e-8);
+  assert.ok(Math.abs(r.staffDirect-32.8)<1e-8);
+});
+
+test('level-up excludes upgrades from other elements and physical selection in menu', () => {
+  const {context}=gameContext();
+  const r=run(context,`(() => {
+    const choices={};
+    for(const el of ['fire','ice','lightning']){
+      start('sword',el);levelQueue=1;choose();
+      const allowed=upgrades.filter(u=> (u.id!=='elemental'||p.element!=='physical')&&(!['fire','ash','ring'].includes(u.id)||p.element==='fire')&&(!['shock','chain','storm'].includes(u.id)||p.element==='lightning'));
+      choices[el]={allowed:allowed.map(u=>u.id),html:overlay.innerHTML};
+    }
+    chooseElement('staff');return {choices,menu:overlay.innerHTML};
+  })()`);
+  assert.ok(!r.choices.fire.allowed.includes('shock'));
+  assert.ok(!r.choices.lightning.allowed.includes('fire'));
+  assert.ok(!r.choices.ice.allowed.includes('fire')&&!r.choices.ice.allowed.includes('shock'));
+  assert.ok(!r.menu.includes('data-element="physical"'));
+});
+
+test('route selection opens at level 3 and attribute +1 is always offered',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('sword','ice');p.lv=3;levelQueue=1;choose();
+   const routeMenu=state==='route'&&overlay.innerHTML.includes('영원한 겨울')&&overlay.innerHTML.includes('빙하의 무장');
+   p.route='A';state='playing';choose();
+   const attrCard=overlay.innerHTML.includes('속성 공격력 +1');
+   return {routeMenu,attrCard,remaining:levelQueue};
+ })()`);
+ assert.equal(r.routeMenu,true);assert.equal(r.attrCard,true);assert.equal(r.remaining,0);
+});
+
+test('ranged shots retain target coordinates without homing',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('crossbow','lightning');spawn=1000;attack=1000;
+   const target=addEnemy('stone_golem');target.x=200;target.y=0;target.speed=0;
+   p.action={target:{x:200,y:0}};fireWeapon();p.action=null;
+   const s=shots[0],oldVx=s.vx,oldVy=s.vy;
+   target.x=0;target.y=300;update(.05);
+   return {vx:oldVx,vy:oldVy,afterX:s.vx,afterY:s.vy,shootX:s.x,shootY:s.y};
+ })()`);
+ assert.ok(r.vx>0);assert.ok(Math.abs(r.vy)<1e-8);
+ assert.equal(r.afterX,r.vx);assert.equal(r.afterY,r.vy);assert.ok(Math.abs(r.shootY)<1e-8);
+});
+
+test('18 completed build boss fights show ordered TTK targets', (t)=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   const out=[];
+   for(const el of ['fire','ice','lightning'])for(const route of ['A','B'])for(const weapon of ['sword','crossbow','staff']){
+     start(weapon,el);p.lv=18;p.elementalStacks=4;p.route=route;
+     spawn=1000;p.hp=1e6;const boss=addEnemy('boss');boss.x=70;boss.y=0;boss.speed=0;boss.shoot=1000;boss.dmg=0;
+     while(clock<90&&!boss.dead)update(.01);
+     out.push({el,route,weapon,time:clock,dead:boss.dead,target:BUILD_ROUTES[el][route].target[weapon]});
+   }
+   return out;
+ })()`);
+ for(const x of r){
+   assert.equal(x.dead,true,x.el+x.route+x.weapon);
+   assert.ok(Math.abs(x.time-x.target)<=3, `${x.el} ${x.route} ${x.weapon} actual=${x.time.toFixed(1)} target=${x.target}`);
+ }
+ const get=(el,route,weapon)=>r.find(x=>x.el===el&&x.route===route&&x.weapon===weapon).time;
+ assert.ok(get('lightning','B','staff')<get('lightning','B','sword'));
+ assert.ok(get('lightning','B','sword')<get('lightning','B','crossbow'));
+ assert.ok(get('ice','A','crossbow')>get('ice','B','crossbow'));
+ for(const x of r)t.diagnostic(`${x.el}/${x.route}/${x.weapon} ${x.time.toFixed(1)}s (target ${x.target}s)`);
+});
+
+test('midboss uses comparable defense and HP scaling',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('staff','lightning'); const mini=addEnemy('mini'),boss=addEnemy('boss');
+   return {midHP:mini.hp,bossHP:boss.hp,midDef:mini.defense,bossDef:boss.defense};
+ })()`);
+ assert.equal(r.midHP,1260);assert.equal(r.bossHP,4000);
+ assert.equal(r.midDef,50);
+ assert.equal(r.midDef,r.bossDef);
+});
+
+
+test('every normal level-up offers four unique cards and the selected element only', () => {
+ const {context}=gameContext();
+ const result=run(context,`(() => {
+   const answer={};
+   for (const element of ['fire','ice','lightning']){
+     for(const weapon of ['sword','crossbow','staff']){
+       start(weapon,element);p.lv=11;p.route='B';p.evolution[6]='spread';p.evolution[10]='rapid';
+       const choices=rollUpgrades();
+       answer[element+'/'+weapon]={ids:choices.map(c=>c.id),foreign:choices.some(c=>c.element&&c.element!==element),
+         wrongWeapon:choices.some(c=>c.weapon&&c.weapon!==weapon)};
+       levelQueue=1;choose();
+       answer[element+'/'+weapon].has4=overlay.innerHTML.includes('data-n="3"');
+       answer[element+'/'+weapon].reroll=overlay.innerHTML.includes('선택지 새로고침');
+     }
+   }
+   return answer;
+ })()`);
+ for(const [key,value] of Object.entries(result)){
+   assert.equal(value.ids.length,4,key);assert.equal(new Set(value.ids).size,4,key);
+   assert.equal(value.ids[0],'elemental',key);
+   assert.equal(value.foreign,false,key);assert.equal(value.wrongWeapon,false,key);
+   assert.equal(value.has4,true,key);assert.equal(value.reroll,true,key);
+ }
+});
+
+test('artifact cards unlock by level, are element locked and cannot repeat',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('sword','ice');p.lv=2;const early=availableUpgrades().map(x=>x.id);
+   p.lv=8;p.route='A';const late=availableUpgrades().map(x=>x.id);
+   upgrades.find(u=>u.id==='iceBolt').apply();
+   const after=availableUpgrades().map(x=>x.id);
+   return {early,late,after};
+ })()`);
+ assert.ok(r.early.includes('iceBolt')&&!r.early.includes('frozenHeart'));
+ assert.ok(r.late.includes('frozenHeart')&&r.late.includes('iceBolt'));
+ assert.ok(!r.late.includes('meteorEye')&&!r.late.includes('thunderEarring'));
+ assert.ok(!r.after.includes('iceBolt'));
+});
+
+test('weapon-only upgrades and elemental attacks produce visible gameplay effects',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('sword','ice');let enemy=addEnemy('stone_golem');enemy.x=118;enemy.y=0;enemy.speed=0;
+   p.action={target:{x:118,y:0}};fireWeapon();const before=enemy.hp;
+   p.items.swordReach=true;fireWeapon();const after=enemy.hp;
+   start('crossbow','ice');enemy=addEnemy('stone_golem');enemy.x=250;enemy.y=0;enemy.speed=0;
+   p.items.iceBolt=true;pulseArtifactCards(3.01);
+   const iceShots=shots.filter(s=>s.skillTag==='ice').length;
+   start('staff','fire');enemy=addEnemy('stone_golem');enemy.x=70;enemy.y=0;enemy.speed=0;
+   p.items.meteorEye=true;pulseArtifactCards(5.01);
+   const scheduled=p.skillPending.length;const hpBefore=enemy.hp;
+   pulseArtifactCards(.7);
+   return {before,after,iceShots,scheduled,meteorDamage:hpBefore-enemy.hp};
+ })()`);
+ assert.equal(r.before,110);
+ assert.ok(r.after<r.before);
+ assert.equal(r.iceShots,2);assert.equal(r.scheduled,1);assert.ok(r.meteorDamage>0);
+});
+
+test('three evolutionary milestones offer explicit direction choices',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   const result={};
+   for(const lv of [6,10,14]){
+     start('staff','lightning');p.route='B';p.lv=lv;levelQueue=1;
+     for(const earlier of [6,10,14])if(earlier<lv)p.evolution[earlier]='spread';
+     choose();result[lv]={state,menu:overlay.innerHTML};
+   }
+   return result;
+ })()`);
+ for(const lv of [6,10,14]){
+   assert.equal(r[lv].state,'evolution');
+   assert.ok(r[lv].menu.includes('data-n="1"'));
+   assert.ok(r[lv].menu.includes('기술 진화'));
+ }
+});
+
+test('Sephiria-inspired element cards trigger different nonhoming effects',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   const out={};
+   for(const element of ['fire','ice','lightning']){
+     start('staff',element);p.lv=8;p.route='A';spawn=1000;
+     const target=addEnemy('stone_golem');target.x=70;target.y=0;target.hp=target.maxhp=1000;target.speed=0;
+     const id={fire:'phoenixFeather',ice:'glacierEcho',lightning:'electroChakram'}[element];
+     p.items[id]=true;pulseArtifactCards(5);
+     out[element]={shots:shots.length,fx:fx.map(x=>x.type),damage:1000-target.hp};
+   }
+   return out;
+ })()`);
+ assert.ok(r.fire.shots>0);
+ assert.ok(r.ice.fx.includes('blast')&&r.ice.damage>0);
+ assert.ok(r.lightning.fx.includes('blast')&&r.lightning.damage>0);
+});
+
+test('oak coal shortens burn interval without extending burn duration',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('staff','fire');p.items.oakCoal=true;
+   const enemy={};const ticks=[];applyBurn(enemy,30);
+   tickStatuses(enemy,3,(_e,v)=>ticks.push(v));
+   return {interval:.7,ticks,expired:!enemy.burn};
+ })()`);
+ assert.equal(r.ticks.length,4);
+ assert.ok(r.ticks.every(x=>x===3));
+ assert.equal(r.expired,true);
 });
