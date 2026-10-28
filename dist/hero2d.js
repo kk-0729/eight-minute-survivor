@@ -1,20 +1,23 @@
 // Ren's body is fixed; the forearm and sword animate independently.
 const renBody = new Image();
 renBody.src = 'assets/ren-body-2d.png';
+const plumSword = new Image();
+plumSword.src = 'assets/plum-sword.png';
 function drawRenArm(action) {
   let angle=-.15;
   if(action){
-    if(action.stage==='windup') angle=-.15-.45*(1-action.remaining/action.windup);
-    else {const t=1-action.remaining/action.follow;angle=t<.45?-.6+1.05*t/.45:.45-.6*(t-.45)/.55}
+    const aim=action.aim??0;
+    if(action.stage==='windup') angle=aim-.35-.35*(1-action.remaining/action.windup);
+    else {const t=1-action.remaining/action.follow;angle=t<.55?aim-.7+1.4*t/.55:aim+.7-.85*(t-.55)/.45}
   }
-  c.save();c.translate(9,-1);c.rotate(angle);
+  c.save();c.translate(7,-1);c.rotate(angle);
   // The shoulder and sword move together; the character body stays in one pose.
   c.fillStyle='#f1e9d8';c.strokeStyle='#bd995f';c.lineWidth=1;
   c.beginPath();c.moveTo(0,-4);c.quadraticCurveTo(9,-5,13,1);c.lineTo(12,7);c.lineTo(3,7);c.closePath();c.fill();c.stroke();
   c.fillStyle='#f2c6a6';c.beginPath();c.arc(13,4,2.5,0,Math.PI*2);c.fill();
   c.strokeStyle='#4c3b30';c.lineWidth=2.4;c.beginPath();c.moveTo(11,4);c.lineTo(16,4);c.stroke();
-  c.strokeStyle='#d5b774';c.lineWidth=2;c.beginPath();c.moveTo(16,0);c.lineTo(16,8);c.stroke();
-  c.fillStyle='#e8ebee';c.strokeStyle='#7c8991';c.lineWidth=.8;c.beginPath();c.moveTo(17,2);c.lineTo(35,4);c.lineTo(17,6);c.closePath();c.fill();c.stroke();
+  if(plumSword.complete&&plumSword.naturalWidth)c.drawImage(plumSword,11,-9,48,24);
+  else {c.strokeStyle='#e47baf';c.lineWidth=4;c.beginPath();c.moveTo(13,4);c.lineTo(46,4);c.stroke()}
   c.restore();
 }
 function drawHero2D() {

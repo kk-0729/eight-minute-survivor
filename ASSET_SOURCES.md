@@ -31,3 +31,8 @@ generated with the built-in image generation tool. The prompts requested a
 stationary Ren body based on the existing sprite, an overhead forest patch
 matching the Henesys ground, and an overhead sandstone formation matching the
 Perion ground. The movable sword arm is drawn separately by the game.
+
+`dist/assets/plum-sword.png` was generated with the built-in image generation
+tool using the user's supplied spectral sword image as a shape reference. The
+prompt requested a horizontal sword with a plum-blossom motif and rose-pink,
+dark plum and pale highlights, isolated on a transparent background.
