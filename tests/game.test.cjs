@@ -674,7 +674,8 @@ test('user reference Ren PNG replaces the previous sword hero artwork', () => {
   assert.equal(r.oldArm,'undefined');
   for(const phase of [r.idle,r.windup,r.follow]){
     assert.equal(phase.length,2);
-    assert.ok(phase.every(url=>url==='assets/characters/ren-reference.png'));
+    assert.equal(phase[0],'assets/characters/ren-reference.png');
+    assert.ok(['assets/characters/ren-reference.png','assets/characters/ren-eight-directions-v2.png'].includes(phase[1]));
   }
 });
 
@@ -691,7 +692,18 @@ test('rendering the reference Ren uses separate upper/lower frames with stable f
     return {idle,attacking};
  })()`);
  assert.deepEqual(Array.from(r.idle,x=>x.sy),[54,0]);
- assert.deepEqual(Array.from(r.attacking,x=>x.sy),[54,0]);
+ assert.deepEqual(Array.from(r.attacking,x=>x.sy),[54,50]);
  assert.equal(r.idle[0].sx,0);
  assert.equal(r.attacking[0].sx,160);
+});
+
+
+test('elemental crescents draw the matching sprite cell at the attack direction',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {const out=[];const calls=[];c.drawImage=(...args)=>calls.push(args);c.rotate=a=>out.push(a);
+ for(const element of ['fire','ice','lightning']){drawSwordArea({x:0,y:0,a:Math.PI/4,range:100,direction:1,element,progress:.5,life:.1,max:.2})}
+ return {angles:out, cells:calls.map(x=>x[1]), images:calls.map(x=>x[0].url)};})()`);
+ assert.deepEqual(Array.from(r.angles),[Math.PI/4,Math.PI/4,Math.PI/4]);
+ assert.ok(r.cells[0]<r.cells[1]&&r.cells[1]<r.cells[2]);
+ assert.ok(r.images.every(x=>x==='assets/effects/sword-elements-v2.png'));
 });

@@ -1,3 +1,5 @@
+const swordEffectSheet=new Image();
+swordEffectSheet.src='assets/effects/sword-elements-v2.png';
 // A 120-degree alternating arc, shared by the hitbox and the sword ribbon.
 const SWORD_HALF_ANGLE=Math.PI/3;
 const SWORD_SWING_DURATION=.20;
@@ -56,6 +58,18 @@ function drawSwordArea(f){
   const tip=start+side*advance;
   const tail=start+side*Math.max(0,advance-.68);
   const palette=swordElementPalette(f.element);
+  // Reference-inspired crescent, aimed independently of the moving feet.
+  const index={fire:0,ice:1,lightning:2}[f.element];
+  if(index!==undefined&&swordEffectSheet.complete&&swordEffectSheet.naturalWidth){
+    const cell=swordEffectSheet.naturalWidth/3, h=swordEffectSheet.naturalHeight;
+    const grow=.78+.22*Math.sin(Math.PI*progress);
+    c.save();c.translate(f.x,f.y-10);c.rotate(aim);
+    c.globalAlpha*=Math.min(1,progress*8)*Math.min(1,(1-progress)*5);
+    c.imageSmoothingEnabled=false;
+    c.drawImage(swordEffectSheet,index*cell,0,cell,h,0,-radius*.85*grow,radius*1.75*grow,radius*1.7*grow);
+    c.restore();
+    return;
+  }
   const opacity=Math.max(.08,1-progress*.62);
   c.save();
   c.globalAlpha*=opacity;

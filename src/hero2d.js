@@ -3,6 +3,8 @@
 // Other classes retain their separate existing models until their own reference art is supplied.
 const renReference = new Image();
 renReference.src = 'assets/characters/ren-reference.png';
+const renDirections = new Image();
+renDirections.src = 'assets/characters/ren-eight-directions-v2.png';
 const heroAtlas = new Image();
 heroAtlas.src = 'assets/characters/adventurers.png';
 const REN_CELL=80;
@@ -37,13 +39,20 @@ function drawRenReference(){
  const srcX=frame*REN_CELL;
  // Lower body is anchored to feet and continues to move independently of aim.
  c.save();c.translate(0,walk);
+ if(p.moving&&(p.moveFacing||1)!==(facingLeft?-1:1))c.scale(-1,1);
  c.drawImage(renReference,srcX,54,REN_CELL,26,-40,-4+bob,80,26);
  c.restore();
  // Upper body rotates a little in aiming direction rather than an unnatural
  // 360-degree rotation of a front-facing illustration.
  c.save();c.translate(0,-4+bob);c.rotate(shoulderTurn);
  if(aiming&&up)c.transform(1,0,0,.96,0,-1);
- c.drawImage(renReference,srcX,0,REN_CELL,55,-40,-54,80,55);
+ if(action&&action.stage!=='recovery'&&renDirections.complete&&renDirections.naturalWidth){
+   // Each cell is already authored in its target direction; cancel the idle flip.
+   c.scale(facingLeft?-1:1,1);
+   const octant=((Math.round(-angle/(Math.PI/4))%8)+8)%8;
+   const sw=renDirections.naturalWidth/4,sh=renDirections.naturalHeight/2;
+   c.drawImage(renDirections,(octant%4)*sw,Math.floor(octant/4)*sh,sw,sh*.72,-48,-67,96,69);
+ }else c.drawImage(renReference,srcX,0,REN_CELL,55,-40,-54,80,55);
  c.restore();
  if(p.inv>0){c.fillStyle='rgba(255,255,255,.16)';c.fillRect(-13,-44,26,55)}
  c.restore();
