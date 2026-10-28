@@ -93,21 +93,16 @@ test('first two minutes: normal enemies take one hit and strongest takes two wit
   }
 });
 
-test('attack upgrade adds ten percent of base attack per pick, not compound damage', () => {
+test('each level grants +5% base attack; element card adds exactly +1', () => {
   const {context}=gameContext();
-  const result=run(context,`(() => {
-    start('sword');const u=upgrades.find(u=>u.id==='attack');
-    const removed=upgrades.every(u=>u.id!=='power' && !u.desc.includes('피해 +25%'));
-    const values=[0,1,2,5].map(n=>{
-      p.attackStacks=0;for(let i=0;i<n;i++)u.apply();
-      const e=addEnemy('stone_golem');e.hp=e.maxhp=1000;e.defense=0;
-      weaponHit(e,'sword','physical');return 1000-e.hp;
-    });
-    return {removed,values,stacks:p.attackStacks,description:u.desc};
+  const r=run(context,`(() => {
+    start('sword','fire'); const attr=upgrades.find(u=>u.id==='elemental');
+    const initial=levelAttack(p,'fire');p.lv=18;
+    const at18=levelAttack(p,'fire');for(let i=0;i<4;i++)attr.apply();
+    return {initial,at18,after:levelAttack(p,'fire'),stacks:p.elementalStacks,hasOld:upgrades.some(u=>u.id==='attack')};
   })()`);
-  assert.equal(result.removed,true);
-  assert.deepEqual(Array.from(result.values),[20,22,24,30]);
-  assert.equal(result.stacks,5);
+  assert.equal(r.initial,20);assert.equal(r.at18,37);
+  assert.equal(r.after,41);assert.equal(r.stacks,4);assert.equal(r.hasOld,false);
 });
 
 test('ice refreshes for two seconds without stacking', () => {
@@ -227,18 +222,17 @@ test('experience, combinations, boss timing, and restart work', () => {
   for (const key of ['magnet', 'fire', 'mid', 'win', 'restarted']) assert.equal(result[key], true, key);
 });
 
-test('base DPS is equal and staff gains more from elemental upgrades', () => {
+test('base DPS is equal and all weapons use the same +1 element attack cards', () => {
   const {context}=gameContext();
   const r=run(context,`(() => {
     const base=Object.fromEntries(Object.entries(WEAPON_STATS).map(([w,v])=>[w,BASE_ATTACK.fire*v.coefficient/v.interval]));
-    const after=Object.fromEntries(Object.entries(WEAPON_STATS).map(([w,v])=>[w,base[w]*elementalMultiplier(w,'fire',5)]));
-    start('staff','fire'); p.elementalStacks=5; const enemy=addEnemy('stone_golem');enemy.defense=0;enemy.hp=1000;
-    weaponHit(enemy,'staff','fire');
-    return {base,after,staffHit:1000-enemy.hp,expectedStaffHit:20*.8*1.6};
+    const after=Object.fromEntries(Object.entries(WEAPON_STATS).map(([w,v])=>[w,41*v.coefficient/v.interval]));
+    start('staff','fire'); p.lv=18;p.elementalStacks=4;
+    return {base,after,staffDirect:levelAttack(p,'fire')*WEAPON_STATS.staff.coefficient};
   })()`);
-  for (const v of Object.values(r.base)) assert.ok(Math.abs(v-40)<1e-8);
-  assert.ok(r.after.staff>r.after.crossbow && r.after.staff>r.after.sword);
-  assert.ok(Math.abs(r.staffHit-r.expectedStaffHit)<1e-8);
+  for(const v of Object.values(r.base)) assert.ok(Math.abs(v-40)<1e-8);
+  for(const v of Object.values(r.after)) assert.ok(Math.abs(v-82)<1e-8);
+  assert.ok(Math.abs(r.staffDirect-32.8)<1e-8);
 });
 
 test('level-up excludes upgrades from other elements and physical selection in menu', () => {
@@ -256,4 +250,64 @@ test('level-up excludes upgrades from other elements and physical selection in m
   assert.ok(!r.choices.lightning.allowed.includes('fire'));
   assert.ok(!r.choices.ice.allowed.includes('fire')&&!r.choices.ice.allowed.includes('shock'));
   assert.ok(!r.menu.includes('data-element="physical"'));
+});
+
+test('route selection opens at level 3 and attribute +1 is always offered',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('sword','ice');p.lv=3;levelQueue=1;choose();
+   const routeMenu=state==='route'&&overlay.innerHTML.includes('영원한 겨울')&&overlay.innerHTML.includes('빙하의 무장');
+   p.route='A';state='playing';choose();
+   const attrCard=overlay.innerHTML.includes('속성 공격력 +1');
+   return {routeMenu,attrCard,remaining:levelQueue};
+ })()`);
+ assert.equal(r.routeMenu,true);assert.equal(r.attrCard,true);assert.equal(r.remaining,0);
+});
+
+test('ranged shots retain target coordinates without homing',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('crossbow','lightning');spawn=1000;attack=1000;
+   const target=addEnemy('stone_golem');target.x=200;target.y=0;target.speed=0;
+   p.action={target:{x:200,y:0}};fireWeapon();p.action=null;
+   const s=shots[0],oldVx=s.vx,oldVy=s.vy;
+   target.x=0;target.y=300;update(.05);
+   return {vx:oldVx,vy:oldVy,afterX:s.vx,afterY:s.vy,shootX:s.x,shootY:s.y};
+ })()`);
+ assert.ok(r.vx>0);assert.ok(Math.abs(r.vy)<1e-8);
+ assert.equal(r.afterX,r.vx);assert.equal(r.afterY,r.vy);assert.ok(Math.abs(r.shootY)<1e-8);
+});
+
+test('18 completed build boss fights show ordered TTK targets', (t)=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   const out=[];
+   for(const el of ['fire','ice','lightning'])for(const route of ['A','B'])for(const weapon of ['sword','crossbow','staff']){
+     start(weapon,el);p.lv=18;p.elementalStacks=4;p.route=route;
+     spawn=1000;p.hp=1e6;const boss=addEnemy('boss');boss.x=70;boss.y=0;boss.speed=0;boss.shoot=1000;boss.dmg=0;
+     while(clock<90&&!boss.dead)update(.01);
+     out.push({el,route,weapon,time:clock,dead:boss.dead,target:BUILD_ROUTES[el][route].target[weapon]});
+   }
+   return out;
+ })()`);
+ for(const x of r){
+   assert.equal(x.dead,true,x.el+x.route+x.weapon);
+   assert.ok(Math.abs(x.time-x.target)<=3, `${x.el} ${x.route} ${x.weapon} actual=${x.time.toFixed(1)} target=${x.target}`);
+ }
+ const get=(el,route,weapon)=>r.find(x=>x.el===el&&x.route===route&&x.weapon===weapon).time;
+ assert.ok(get('lightning','B','staff')<get('lightning','B','sword'));
+ assert.ok(get('lightning','B','sword')<get('lightning','B','crossbow'));
+ assert.ok(get('ice','A','crossbow')>get('ice','B','crossbow'));
+ for(const x of r)t.diagnostic(`${x.el}/${x.route}/${x.weapon} ${x.time.toFixed(1)}s (target ${x.target}s)`);
+});
+
+test('midboss uses comparable defense and HP scaling',()=>{
+ const {context}=gameContext();
+ const r=run(context,`(() => {
+   start('staff','lightning'); const mini=addEnemy('mini'),boss=addEnemy('boss');
+   return {midHP:mini.hp,bossHP:boss.hp,midDef:mini.defense,bossDef:boss.defense};
+ })()`);
+ assert.equal(r.midHP,1260);assert.equal(r.bossHP,4000);
+ assert.equal(r.midDef,BOSS_DEFENSE);
+ assert.equal(r.midDef,r.bossDef);
 });
