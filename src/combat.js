@@ -1,13 +1,18 @@
 // Project test values, not Sephiria's full damage formula or item data.
 const WEAPON_STATS={
   sword:{coefficient:1,interval:.50,range:92,projectileSpeed:0,pierce:0},
-  crossbow:{coefficient:1,interval:.33,range:738,projectileSpeed:410,pierce:0},
-  staff:{coefficient:.7,interval:.40,range:441,projectileSpeed:245,pierce:0}
+  crossbow:{coefficient:.66,interval:.33,range:738,projectileSpeed:410,pierce:0},
+  staff:{coefficient:.8,interval:.40,range:441,projectileSpeed:245,pierce:0}
 };
 const ELEMENTS={physical:'물리',fire:'화염',ice:'냉기',lightning:'번개'};
 const BASE_ATTACK={physical:20,fire:20,ice:20,lightning:20};
 // No critical system existed previously; 0% preserves that behavior. Multiplier is provisional.
 const BASE_CRIT={chance:0,multiplier:1.5};
+// A shared elemental upgrade amplifies the selected element. The staff specializes in it.
+const ELEMENTAL_BONUS_PER_STACK={sword:.08,crossbow:.08,staff:.12};
+function elementalMultiplier(weapon,element,stacks=0){
+  return element==='physical'?1:1+(ELEMENTAL_BONUS_PER_STACK[weapon]||0)*Math.max(0,stacks);
+}
 function equipWeapon(player,id){if(!WEAPON_STATS[id])return false;player.weapon=id;return true}
 function defenseReduction(defense){return Math.max(0,Math.min(.9,.445*Math.log1p(Math.max(0,defense)/40)))}
 function calculateDirectDamage(attacks,element,coefficient,defense,critChance=0,critMultiplier=1.5,roll=Math.random()){
