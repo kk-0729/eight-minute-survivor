@@ -55,8 +55,10 @@ function calculateDirectDamage(attacks,element,coefficient,defense,critChance=0,
 function applyBurn(enemy,directDamage){
   // Refresh duration and damage without restarting the tick clock: fast hits
   // must not indefinitely postpone the next burn tick.
-  const untilTick=enemy.burn?.untilTick??1;
-  enemy.burn={remaining:3,untilTick,ticksLeft:3,damage:directDamage*.1};
+  const interval=(typeof p!=='undefined'&&p?.items?.oakCoal)?0.7:1;
+  // Keep the elapsed countdown when reapplying burn, but never postpone a tick.
+  const untilTick=Math.min(enemy.burn?.untilTick??interval,interval);
+  enemy.burn={remaining:3,untilTick,interval,ticksLeft:Math.ceil(3/interval),damage:directDamage*.1};
   enemy.fire=3;
 }
 function applyIce(enemy){enemy.iceRemaining=2}
@@ -67,7 +69,7 @@ function tickStatuses(enemy,dt,onBurn){
   const burn=enemy.burn;if(!burn)return;
   let time=Math.min(dt,burn.remaining);
   while(time+1e-9>=burn.untilTick&&burn.ticksLeft>0){
-    time-=burn.untilTick;burn.remaining-=burn.untilTick;burn.untilTick=1;burn.ticksLeft--;
+    time-=burn.untilTick;burn.remaining-=burn.untilTick;burn.untilTick=burn.interval||1;burn.ticksLeft--;
     onBurn(enemy,burn.damage);if(enemy.dead)break;
   }
   burn.remaining=Math.max(0,burn.remaining-time);burn.untilTick-=time;
