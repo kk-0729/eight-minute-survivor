@@ -5,6 +5,33 @@ const renReference = new Image();
 renReference.src = 'assets/characters/ren-reference.png';
 const renDirections = new Image();
 renDirections.src = 'assets/characters/ren-eight-directions-v2.png';
+// The source GIF contains four directional animations with the character and
+// effect together. Atlases retain its six original frames and timing.
+const renGifAttacks={fire:new Image(),ice:new Image(),lightning:new Image()};
+for(const element of Object.keys(renGifAttacks))renGifAttacks[element].src=`assets/characters/gif-attack/${element}.png`;
+function cardinalSwordDirection(angle){
+ const quadrant=((Math.round(angle/(Math.PI/2))%4)+4)%4;
+ return [3,1,2,0][quadrant]; // right, down, left, up
+}
+function gifSwordFrame(action){
+ const total=(action.windup||0)+(action.follow||0)+(action.recovery||0);
+ if(!total)return 0;
+ const elapsed=action.stage==='windup'?action.windup-action.remaining:
+   action.stage==='follow'?action.windup+action.follow-action.remaining:
+   total-action.remaining;
+ const time=Math.max(0,Math.min(.9999,elapsed/total))*62;
+ return time<10?0:time<17?1:time<26?2:time<38?3:time<47?4:5;
+}
+function hasGifSword(element){const img=renGifAttacks[element];return !!(img&&img.complete&&img.naturalWidth);}
+function drawGifSword(){
+ const action=p.action,img=renGifAttacks[p.element];
+ if(!action||!hasGifSword(p.element))return false;
+ const row=cardinalSwordDirection(action.aim),frame=gifSwordFrame(action);
+ c.save();c.imageSmoothingEnabled=false;
+ // Crop includes character and effect, anchored at the feet of the source pose.
+ c.drawImage(img,frame*300,row*190,300,190,p.x-105,p.y-159,300,190);
+ c.restore();return true;
+}
 const heroAtlas = new Image();
 heroAtlas.src = 'assets/characters/adventurers.png';
 const REN_CELL=80;
@@ -64,7 +91,7 @@ function drawRangedArm(weapon,action){
  else{c.strokeStyle='#a98259';c.lineWidth=3;c.beginPath();c.moveTo(12,9);c.lineTo(22,-14);c.stroke();c.fillStyle='#bca8e8';c.fillRect(19,-17,6,6)}c.restore();
 }
 function drawHero2D(){
- if(p.weapon==='sword'){drawRenReference();return}
+ if(p.weapon==='sword'){if(!drawGifSword())drawRenReference();return}
  const bob=p.moving?Math.abs(Math.sin(clock*10))*1.7:Math.sin(clock*2)*.4,index=p.weapon==='crossbow'?1:2;
  c.save();c.translate(p.x,p.y-bob);c.fillStyle='rgba(28,23,20,.22)';c.beginPath();c.ellipse(0,15+bob,11,3.5,0,0,7);c.fill();
  if(state==='dead'){c.rotate(-1.1);c.globalAlpha=.7}
