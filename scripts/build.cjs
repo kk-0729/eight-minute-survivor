@@ -22,6 +22,15 @@ function copyDirectory(from, to) {
   }
 }
 copyDirectory(source, destination);
+// Version script URLs by their content so browsers do not mix old and new releases.
+const crypto = require('node:crypto');
+const builtIndex = path.join(destination, 'index.html');
+let builtHtml = fs.readFileSync(builtIndex, 'utf8');
+builtHtml = builtHtml.replace(/<script src="([^"]+\.js)"><\/script>/g, (tag, file) => {
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(destination,file))).digest('hex').slice(0,12);
+  return `<script src="${file}?v=${hash}"></script>`;
+});
+fs.writeFileSync(builtIndex, builtHtml);
 fs.writeFileSync(path.join(destination, '.nojekyll'), '');
 // Preserve unrelated files in dist; only overwrite files represented in src.
 copyDirectory(source, distribution);

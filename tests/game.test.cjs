@@ -655,46 +655,17 @@ test('leveling heals 25 percent of maximum per level and actual direct damage gr
  assert.equal(r.lv,2);assert.equal(r.hp,100);assert.ok(Math.abs(r.leveled/r.base-1.05)<1e-8);assert.ok(Math.abs(r.upgraded-r.leveled-.8)<1e-8);
 });
 
-test('user reference Ren PNG replaces the previous sword hero artwork', () => {
-  const {context,requestedImages}=gameContext();
-  assert.ok(requestedImages.includes('assets/characters/ren-reference.png'));
-  assert.ok(html.includes(".character-sword{background-image:url('assets/characters/ren-reference.png')"));
-  const r=run(context,`(() => {
-    start('sword','fire');
-    const calls=[];c.drawImage=(...args)=>calls.push(args);
-    drawHero2D();const idle=calls.map(args=>args[0].url);
-    calls.length=0;
-    p.action={stage:'windup',windup:.08,remaining:.04,aim:0,target:{x:50,y:0}};
-    drawHero2D();const windup=calls.map(args=>args[0].url);
-    calls.length=0;
-    p.action.stage='follow';p.action.remaining=.1;p.action.follow=.2;
-    drawHero2D();const follow=calls.map(args=>args[0].url);
-    return {idle,windup,follow,oldArm:typeof drawRenArm};
-  })()`);
-  assert.equal(r.oldArm,'undefined');
-  for(const phase of [r.idle,r.windup,r.follow]){
-    assert.equal(phase.length,2);
-    assert.equal(phase[0],'assets/characters/ren-reference.png');
-    assert.ok(['assets/characters/ren-reference.png','assets/characters/ren-eight-directions-v2.png'].includes(phase[1]));
-  }
-});
-
-test('rendering the reference Ren uses separate upper/lower frames with stable feet',()=>{
- const {context}=gameContext();
- const r=run(context,`(() => {
-    start('sword','ice');const calls=[];c.drawImage=(...args)=>calls.push(args);
-    p.moving=1;drawHero2D();
-    const idle=calls.map(x=>({sx:x[1],sy:x[2],sh:x[4]}));
-    calls.length=0;
-    p.action={stage:'follow',remaining:.1,follow:.2,aim:Math.PI/2};
-    drawHero2D();
-    const attacking=calls.map(x=>({sx:x[1],sy:x[2],sh:x[4]}));
-    return {idle,attacking};
- })()`);
- assert.deepEqual(Array.from(r.idle,x=>x.sy),[54,0]);
- assert.deepEqual(Array.from(r.attacking,x=>x.sy),[54,50]);
- assert.equal(r.idle[0].sx,0);
- assert.equal(r.attacking[0].sx,160);
+test('source GIF attack frames select the proper element, direction and phase',()=>{
+ const {context,requestedImages}=gameContext();
+ for(const element of ['fire','ice','lightning'])assert.ok(requestedImages.includes(`assets/characters/gif-attack/${element}.png`));
+ const r=run(context,`(() => {const out=[];c.drawImage=(...args)=>out.push({src:args[0].url,sx:args[1],sy:args[2]});
+ for(const element of ['fire','ice','lightning'])for(const angle of [-Math.PI/2,Math.PI/2,Math.PI,0]){
+ start('sword',element);p.action={stage:'follow',windup:.16,follow:.14,recovery:.20,remaining:.07,aim:angle};drawHero2D();}
+ return {out,frames:[0,.11,.18,.27,.39,.48].map(t=>gifSwordFrame({stage:'windup',windup:1,follow:0,recovery:0,remaining:1-t/62*100}))};})()`);
+ assert.equal(r.out.length,12);
+ assert.deepEqual(Array.from(r.out,x=>x.sy),[0,190,380,570,0,190,380,570,0,190,380,570]);
+ for(let i=0;i<12;i++)assert.equal(r.out[i].src,`assets/characters/gif-attack/${['fire','ice','lightning'][Math.floor(i/4)]}.png`);
+ assert.deepEqual(Array.from(r.frames),[0,1,2,3,4,5]);
 });
 
 
